@@ -1,0 +1,4 @@
+include ':videosdk'
+include ':videocache'
+include ':app'
+rootProject.name = "AndroidVideoCache"
