@@ -6,9 +6,12 @@ import android.os.HandlerThread;
 import androidx.annotation.NonNull;
 
 import com.jeffmony.videocache.common.VideoCacheConfig;
+import com.jeffmony.videocache.proxy.VideoLocalProxyServer;
 
 /**
  * @author jeffmony
+ *
+ * 本地代理的综合管理类
  */
 
 public class VideoProxyCacheManager {
@@ -34,6 +37,9 @@ public class VideoProxyCacheManager {
         handlerThread.start();
     }
 
+    /**
+     * 构建代理缓存的属性
+     */
     public static class Builder {
 
         private long mExpireTime = 7 * 24 * 60 * 60 * 1000;
@@ -80,7 +86,7 @@ public class VideoProxyCacheManager {
 
     public void initProxyConfig(@NonNull VideoCacheConfig config) {
         mProxyConfig = config;
-
+        new VideoLocalProxyServer(config);  //初始化本地代理服务
     }
 
 }

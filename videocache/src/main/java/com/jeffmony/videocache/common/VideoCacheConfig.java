@@ -39,6 +39,10 @@ public class VideoCacheConfig {
         return mConnTimeOut;
     }
 
+    public void setPort(int port) {
+        mPort = port;
+    }
+
     public int getPort() {
         return mPort;
     }

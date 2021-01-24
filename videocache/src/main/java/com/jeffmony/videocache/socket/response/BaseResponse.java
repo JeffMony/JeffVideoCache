@@ -1,4 +1,4 @@
 package com.jeffmony.videocache.socket.response;
 
-public class BaseResponse {
+public abstract class BaseResponse {
 }
