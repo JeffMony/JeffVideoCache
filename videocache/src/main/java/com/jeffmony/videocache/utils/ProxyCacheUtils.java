@@ -2,7 +2,13 @@ package com.jeffmony.videocache.utils;
 
 import java.io.Closeable;
 import java.net.URLDecoder;
+import java.security.MessageDigest;
 
+/**
+ * @author jeffmony
+ *
+ * 本地代理相关的工具类
+ */
 public class ProxyCacheUtils {
 
     private static final String TAG = "ProxyCacheUtils";
@@ -28,5 +34,23 @@ public class ProxyCacheUtils {
             LogUtils.w(TAG,"Encoding not supported, ignored: " + ignored.getMessage());
         }
         return decoded;
+    }
+
+    private static String bytesToHexString(byte[] bytes) {
+        StringBuffer sb = new StringBuffer();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
+    }
+
+    public static String computeMD5(String string) {
+        try {
+            MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+            byte[] digestBytes = messageDigest.digest(string.getBytes());
+            return bytesToHexString(digestBytes);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

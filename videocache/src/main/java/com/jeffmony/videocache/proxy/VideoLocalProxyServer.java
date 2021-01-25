@@ -33,7 +33,7 @@ public class VideoLocalProxyServer {
         try {
             InetAddress address = InetAddress.getByName(ProxyCacheUtils.LOCAL_PROXY_HOST);
             mLocalServer = new ServerSocket(0, 8, address);
-            this.mPort = mLocalServer.getLocalPort();
+            mPort = mLocalServer.getLocalPort();
             mConfig.setPort(mPort);
             CountDownLatch startSignal = new CountDownLatch(1);
             WaitSocketRequestsTask task = new WaitSocketRequestsTask(startSignal);

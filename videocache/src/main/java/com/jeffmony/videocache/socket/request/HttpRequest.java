@@ -41,9 +41,6 @@ public class HttpRequest {
         mRemoteIP = inetAddress.isLoopbackAddress() || inetAddress.isAnyLocalAddress()
                         ? ProxyCacheUtils.LOCAL_PROXY_HOST
                         : inetAddress.getHostAddress();
-        String mRemoteHostname = inetAddress.isLoopbackAddress() || inetAddress.isAnyLocalAddress()
-                ? "localhost"
-                : inetAddress.getHostName();
         mHeaders = new HashMap<String, String>();
         mKeepAlive = true;
     }
@@ -53,10 +50,10 @@ public class HttpRequest {
         int splitByteIndex = 0;
         int readLength = 0;
 
-        int read = -1;
-        this.mInputStream.mark(ProxyCacheUtils.DEFAULT_BUFFER_SIZE);
+        int read;
+        mInputStream.mark(ProxyCacheUtils.DEFAULT_BUFFER_SIZE);
         try {
-            read = this.mInputStream.read(buf, 0, ProxyCacheUtils.DEFAULT_BUFFER_SIZE);
+            read = mInputStream.read(buf, 0, ProxyCacheUtils.DEFAULT_BUFFER_SIZE);
         } catch (SSLException e) {
             ProxyCacheUtils.close(this.mInputStream);
             throw e;
@@ -93,23 +90,22 @@ public class HttpRequest {
 
         // Decode the header into params and header java properties
         Map<String, String> extraInfo = new HashMap<String, String>();
-        decodeHeader(headerReader, extraInfo, this.mParams, this.mHeaders);
+        decodeHeader(headerReader, extraInfo, this.mHeaders);
 
         if (null != this.mRemoteIP) {
-            this.mHeaders.put("remote-addr", this.mRemoteIP);
-            this.mHeaders.put("http-client-ip", this.mRemoteIP);
+            mHeaders.put("remote-addr", this.mRemoteIP);
+            mHeaders.put("http-client-ip", this.mRemoteIP);
         }
 
-        this.mMethod = Method.lookup(extraInfo.get("method"));
-        if (this.mMethod == null) {
+        mMethod = Method.lookup(extraInfo.get("method"));
+        if (mMethod == null) {
             throw new VideoCacheException("BAD REQUEST: Syntax error. HTTP verb " + extraInfo.get("method") + " unhandled.");
         }
 
-        this.mUri = extraInfo.get("uri");
+        mUri = extraInfo.get("uri");
 
         String connection = this.mHeaders.get("connection");
-        mKeepAlive = "HTTP/1.1".equals(mProtocolVersion) &&
-                (connection == null || !connection.matches("(?i).*close.*"));
+        mKeepAlive = "HTTP/1.1".equals(mProtocolVersion) && (connection == null || !connection.matches("(?i).*close.*"));
     }
 
     // GET / HTTP/1.1\r\nHost: www.sina.com.cn\r\nConnection: close\r\n\r\n
@@ -134,8 +130,7 @@ public class HttpRequest {
         return 0;
     }
 
-    private void decodeHeader(BufferedReader headerReader, Map<String, String> extraInfo,
-                 Map<String, String> params, Map<String, String> headers)
+    private void decodeHeader(BufferedReader headerReader, Map<String, String> extraInfo, Map<String, String> headers)
             throws VideoCacheException {
         try {
             // Read the request line
@@ -156,15 +151,7 @@ public class HttpRequest {
             }
 
             String uri = st.nextToken();
-
-            // Decode parameters from the URI
-            int questionMaskIndex = uri.indexOf('?');
-            if (questionMaskIndex >= 0 && questionMaskIndex < uri.length()) {
-                decodeParams(uri.substring(questionMaskIndex + 1), params);
-                uri = ProxyCacheUtils.decodeUri(uri.substring(0, questionMaskIndex));
-            } else {
-                uri = ProxyCacheUtils.decodeUri(uri);
-            }
+            uri = ProxyCacheUtils.decodeUri(uri);
 
             // If there's another token, its protocol version,
             // followed by HTTP headers.
@@ -191,25 +178,6 @@ public class HttpRequest {
             extraInfo.put("uri", uri);
         } catch (IOException e) {
             throw new VideoCacheException("Parsing Header Exception: " + e.getMessage(), e);
-        }
-    }
-
-    private void decodeParams(String params, Map<String, String> paramsMap) {
-        if (params == null) {
-            return;
-        }
-
-        StringTokenizer st = new StringTokenizer(params, "&");
-        while (st.hasMoreTokens()) {
-            String item = st.nextToken();
-            int index = item.indexOf('=');
-            if (index >= 0 && index < item.length()) {
-                paramsMap.put(
-                        ProxyCacheUtils.decodeUri(item.substring(0, index)).trim(),
-                        ProxyCacheUtils.decodeUri(item.substring(index + 1)));
-            } else {
-                paramsMap.put(ProxyCacheUtils.decodeUri(item).trim(), "");
-            }
         }
     }
 

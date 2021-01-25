@@ -6,7 +6,17 @@ import android.os.HandlerThread;
 import androidx.annotation.NonNull;
 
 import com.jeffmony.videocache.common.VideoCacheConfig;
+import com.jeffmony.videocache.common.VideoCacheException;
+import com.jeffmony.videocache.listener.IVideoInfoParsedListener;
+import com.jeffmony.videocache.m3u8.M3U8;
+import com.jeffmony.videocache.model.VideoCacheInfo;
 import com.jeffmony.videocache.proxy.VideoLocalProxyServer;
+import com.jeffmony.videocache.utils.ProxyCacheUtils;
+import com.jeffmony.videocache.utils.StorageUtils;
+
+import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author jeffmony
@@ -87,6 +97,69 @@ public class VideoProxyCacheManager {
     public void initProxyConfig(@NonNull VideoCacheConfig config) {
         mProxyConfig = config;
         new VideoLocalProxyServer(config);  //初始化本地代理服务
+        VideoInfoParseManager.getInstance().initProxyConfig(config);
+    }
+
+    /**
+     *
+     * @param videoUrl  视频url
+     */
+    public void startVideoRequest(String videoUrl) {
+        startVideoRequest(videoUrl, new HashMap<>());
+    }
+
+    /**
+     *
+     * @param videoUrl 视频url
+     * @param headers  请求的头部信息
+     */
+    public void startVideoRequest(String videoUrl, Map<String, String> headers) {
+        startVideoRequest(videoUrl, headers, new HashMap<>());
+    }
+
+    /**
+     *
+     * @param videoUrl    视频url
+     * @param headers     请求的头部信息
+     * @param extraParams 额外参数，这个map很有用，例如我已经知道当前请求视频的类型和长度，都可以在extraParams中设置,
+     *                    详情见VideoParams
+     */
+    public void startVideoRequest(String videoUrl, Map<String, String> headers, Map<String, Object> extraParams) {
+        String md5 = ProxyCacheUtils.computeMD5(videoUrl);
+        File saveDir = new File(mProxyConfig.getFilePath(), md5);
+        VideoCacheInfo cacheInfo = StorageUtils.readVideoCacheInfo(saveDir);
+        if (cacheInfo == null) {
+            //之前没有缓存信息
+            cacheInfo = new VideoCacheInfo(videoUrl);
+        }
+
+        VideoInfoParseManager.getInstance().parseVideoInfo(cacheInfo, headers, extraParams, new IVideoInfoParsedListener() {
+            @Override
+            public void onM3U8ParsedFinished(M3U8 m3u8) {
+
+            }
+
+            @Override
+            public void onM3U8ParsedFailed(VideoCacheException e) {
+
+            }
+
+            @Override
+            public void onM3U8LiveCallback() {
+
+            }
+
+            @Override
+            public void onNonM3U8ParsedFinished() {
+
+            }
+
+            @Override
+            public void onNonM3U8ParsedFailed(VideoCacheException e) {
+
+            }
+        });
+
     }
 
 }
