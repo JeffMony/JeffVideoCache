@@ -16,6 +16,10 @@ public class VideoCacheInfo implements Serializable {
         mVideoUrl = url;
     }
 
+    public String getVideoUrl() {
+        return mVideoUrl;
+    }
+
     public void setVideoType(int type) {
         mVideoType = type;
     }

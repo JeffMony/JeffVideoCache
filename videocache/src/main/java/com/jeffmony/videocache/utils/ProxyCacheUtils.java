@@ -1,5 +1,7 @@
 package com.jeffmony.videocache.utils;
 
+import com.jeffmony.videocache.common.VideoMime;
+
 import java.io.Closeable;
 import java.net.URLDecoder;
 import java.security.MessageDigest;
@@ -52,5 +54,14 @@ public class ProxyCacheUtils {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    //当前mimetype是否是M3U8类型
+    public static boolean isM3U8Mimetype(String mimeType) {
+        return mimeType.contains(VideoMime.MIME_TYPE_M3U8_1) ||
+                mimeType.contains(VideoMime.MIME_TYPE_M3U8_2) ||
+                mimeType.contains(VideoMime.MIME_TYPE_M3U8_3) ||
+                mimeType.contains(VideoMime.MIME_TYPE_M3U8_4) ||
+                mimeType.contains(VideoMime.MIME_TYPE_M3U8_5);
     }
 }
