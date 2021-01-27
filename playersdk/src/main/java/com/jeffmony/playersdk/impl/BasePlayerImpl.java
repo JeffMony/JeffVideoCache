@@ -2,6 +2,7 @@ package com.jeffmony.playersdk.impl;
 
 import android.content.Context;
 import android.net.Uri;
+import android.view.Surface;
 
 import com.jeffmony.playersdk.IPlayer;
 
@@ -10,7 +11,7 @@ import java.util.Map;
 
 public abstract class BasePlayerImpl {
 
-    private Context mContext;
+    protected Context mContext;
     private IPlayer.OnPreparedListener mOnPreparedListener;
     private IPlayer.OnVideoSizeChangedListener mOnVideoSizeChangedListener;
     private IPlayer.OnErrorListener mOnErrorListener;
@@ -22,6 +23,8 @@ public abstract class BasePlayerImpl {
 
     public abstract void setDataSource(Context context, Uri uri, Map<String, String> headers)
             throws IOException, IllegalArgumentException, SecurityException, IllegalStateException;
+
+    public abstract void setSurface(Surface surface);
 
     public abstract void prepareAsync() throws IllegalStateException;
 
@@ -57,5 +60,26 @@ public abstract class BasePlayerImpl {
 
     public void setOnCompletionListener(IPlayer.OnCompletionListener listener) {
         mOnCompletionListener = listener;
+    }
+
+    protected void notifyOnPrepared() {
+        if (mOnPreparedListener != null) {
+            mOnPreparedListener.onPrepared();
+        }
+    }
+
+    protected void notifyOnVideoSizeChanged(int width, int height,
+                                            int rotationDegree,
+                                            float pixelRatio,
+                                            float darRatio) {
+        if (mOnVideoSizeChangedListener != null) {
+            mOnVideoSizeChangedListener.onVideoSizeChanged(width, height, rotationDegree, pixelRatio, darRatio);
+        }
+    }
+
+    protected void notifyOnError(int what, String msg) {
+        if (mOnErrorListener != null) {
+            mOnErrorListener.onError(what, msg);
+        }
     }
 }

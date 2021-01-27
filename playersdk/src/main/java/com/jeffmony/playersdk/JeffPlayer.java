@@ -2,6 +2,7 @@ package com.jeffmony.playersdk;
 
 import android.content.Context;
 import android.net.Uri;
+import android.view.Surface;
 
 import com.jeffmony.playersdk.common.PlayerType;
 import com.jeffmony.playersdk.impl.BasePlayerImpl;
@@ -30,6 +31,11 @@ public class JeffPlayer implements IPlayer {
     @Override
     public void setDataSource(Context context, Uri uri, Map<String, String> headers) throws IOException, IllegalArgumentException, SecurityException, IllegalStateException {
         mPlayerImpl.setDataSource(context, uri, headers);
+    }
+
+    @Override
+    public void setSurface(Surface surface) {
+        mPlayerImpl.setSurface(surface);
     }
 
     @Override
