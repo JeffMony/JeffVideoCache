@@ -115,7 +115,6 @@ public class VideoInfoParseManager {
 
     private void parseM3U8Info(VideoCacheInfo cacheInfo) {
         cacheInfo.setVideoType(VideoType.HLS_TYPE);
-
     }
 
 }
