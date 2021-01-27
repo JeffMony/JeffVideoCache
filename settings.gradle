@@ -1,4 +1,4 @@
-include ':videosdk'
+include ':playersdk'
 include ':videocache'
 include ':app'
 rootProject.name = "AndroidVideoCache"
