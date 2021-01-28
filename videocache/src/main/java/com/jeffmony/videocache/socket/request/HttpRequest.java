@@ -2,6 +2,7 @@ package com.jeffmony.videocache.socket.request;
 
 import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
+import com.jeffmony.videocache.utils.StorageUtils;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -46,14 +47,14 @@ public class HttpRequest {
     }
 
     public void parseRequest() throws Exception {
-        byte[] buf = new byte[ProxyCacheUtils.DEFAULT_BUFFER_SIZE];
+        byte[] buf = new byte[StorageUtils.DEFAULT_BUFFER_SIZE];
         int splitByteIndex = 0;
         int readLength = 0;
 
         int read;
-        mInputStream.mark(ProxyCacheUtils.DEFAULT_BUFFER_SIZE);
+        mInputStream.mark(StorageUtils.DEFAULT_BUFFER_SIZE);
         try {
-            read = mInputStream.read(buf, 0, ProxyCacheUtils.DEFAULT_BUFFER_SIZE);
+            read = mInputStream.read(buf, 0, StorageUtils.DEFAULT_BUFFER_SIZE);
         } catch (SSLException e) {
             ProxyCacheUtils.close(this.mInputStream);
             throw e;
@@ -74,7 +75,7 @@ public class HttpRequest {
             if (splitByteIndex > 0) {
                 break;
             }
-            read = mInputStream.read(buf, readLength, ProxyCacheUtils.DEFAULT_BUFFER_SIZE - readLength);
+            read = mInputStream.read(buf, readLength, StorageUtils.DEFAULT_BUFFER_SIZE - readLength);
         }
 
         if (splitByteIndex < readLength) {

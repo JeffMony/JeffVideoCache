@@ -1,6 +1,5 @@
 package com.jeffmony.videocache.socket;
 
-import com.jeffmony.videocache.common.VideoCacheConfig;
 import com.jeffmony.videocache.socket.request.HttpRequest;
 import com.jeffmony.videocache.socket.response.BaseResponse;
 import com.jeffmony.videocache.utils.LogUtils;
@@ -15,11 +14,9 @@ public class SocketProcessTask implements Runnable {
 
     private static final String TAG  = "SocketProcessTask";
     private static AtomicInteger sRequestCountAtomic = new AtomicInteger(0);
-    private final VideoCacheConfig mConfig;
     private final Socket mSocket;
 
-    public SocketProcessTask(Socket socket, VideoCacheConfig config) {
-        mConfig = config;
+    public SocketProcessTask(Socket socket) {
         mSocket = socket;
     }
 

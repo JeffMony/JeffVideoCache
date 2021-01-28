@@ -17,8 +17,9 @@ public class StorageUtils {
 
     private static final String TAG = "StorageUtils";
 
-    private static final Object sFileLock = new Object();
+    public static final int DEFAULT_BUFFER_SIZE = 8 * 1024;
     public static final String INFO_FILE = "video.info";
+    private static final Object sFileLock = new Object();
 
     public static VideoCacheInfo readVideoCacheInfo(File dir) {
         File file = new File(dir, INFO_FILE);

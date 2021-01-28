@@ -1,5 +1,6 @@
 package com.jeffmony.videocache.utils;
 
+import com.jeffmony.videocache.common.VideoCacheConfig;
 import com.jeffmony.videocache.common.VideoMime;
 
 import java.io.Closeable;
@@ -16,7 +17,26 @@ public class ProxyCacheUtils {
     private static final String TAG = "ProxyCacheUtils";
 
     public static final String LOCAL_PROXY_HOST = "127.0.0.1";
-    public static final int DEFAULT_BUFFER_SIZE = 8 * 1024;
+    public static final String LOCAL_PROXY_URL = "http://" + LOCAL_PROXY_HOST;
+
+    private static VideoCacheConfig sConfig;
+    private static int sLocalPort = 0;
+
+    public static void setVideoCacheConfig(VideoCacheConfig config) {
+        sConfig = config;
+    }
+
+    public static VideoCacheConfig getConfig() {
+        return sConfig;
+    }
+
+    public static void setLocalPort(int port) {
+        sLocalPort = port;
+    }
+
+    public static int getLocalPort() {
+        return sLocalPort;
+    }
 
     public static void close(Closeable closeable) {
         if (closeable != null) {

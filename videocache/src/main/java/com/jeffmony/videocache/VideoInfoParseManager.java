@@ -3,11 +3,9 @@ package com.jeffmony.videocache;
 import android.net.Uri;
 import android.text.TextUtils;
 
-import androidx.annotation.NonNull;
 
 import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.common.VideoType;
-import com.jeffmony.videocache.common.VideoCacheConfig;
 import com.jeffmony.videocache.common.VideoParams;
 import com.jeffmony.videocache.listener.IVideoInfoParsedListener;
 import com.jeffmony.videocache.model.VideoCacheInfo;
@@ -27,7 +25,6 @@ public class VideoInfoParseManager {
 
     private static volatile VideoInfoParseManager sInstance = null;
 
-    private VideoCacheConfig mProxyConfig;
     private IVideoInfoParsedListener mListener;
     private Map<String, String> mHeaders;
     private String mContentType;
@@ -42,10 +39,6 @@ public class VideoInfoParseManager {
             }
         }
         return sInstance;
-    }
-
-    public void initProxyConfig(@NonNull VideoCacheConfig config) {
-        mProxyConfig = config;
     }
 
     //解析视频类型
@@ -86,7 +79,7 @@ public class VideoInfoParseManager {
                     //需要发起请求判定当前视频的类型
                     HttpURLConnection connection = null;
                     try {
-                        connection = HttpUtils.getConnection(cacheInfo.getVideoUrl(), mHeaders, mProxyConfig);
+                        connection = HttpUtils.getConnection(cacheInfo.getVideoUrl(), mHeaders);
                         String contentType = connection.getContentType();
                         if (ProxyCacheUtils.isM3U8Mimetype(contentType)) {
                             //当前是M3U8类型

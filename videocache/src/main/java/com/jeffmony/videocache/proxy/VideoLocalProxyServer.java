@@ -1,6 +1,5 @@
 package com.jeffmony.videocache.proxy;
 
-import com.jeffmony.videocache.common.VideoCacheConfig;
 import com.jeffmony.videocache.socket.SocketProcessTask;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
@@ -22,19 +21,18 @@ public class VideoLocalProxyServer {
     private static final String TAG = "LocalProxyCacheServer";
 
     private final ExecutorService mSocketPool = Executors.newFixedThreadPool(8);
-    private final VideoCacheConfig mConfig;
 
     private ServerSocket mLocalServer;
     private Thread mRequestThread;
     private int mPort;
 
-    public VideoLocalProxyServer(VideoCacheConfig config) {
-        mConfig = config;
+    public VideoLocalProxyServer() {
         try {
             InetAddress address = InetAddress.getByName(ProxyCacheUtils.LOCAL_PROXY_HOST);
             mLocalServer = new ServerSocket(0, 8, address);
             mPort = mLocalServer.getLocalPort();
-            mConfig.setPort(mPort);
+            ProxyCacheUtils.getConfig().setPort(mPort);
+            ProxyCacheUtils.setLocalPort(mPort);
             CountDownLatch startSignal = new CountDownLatch(1);
             WaitSocketRequestsTask task = new WaitSocketRequestsTask(startSignal);
             mRequestThread = new Thread(task);
@@ -66,9 +64,9 @@ public class VideoLocalProxyServer {
         do {
             try {
                 Socket socket = mLocalServer.accept();
-                if (mConfig.getConnTimeOut() > 0)
-                    socket.setSoTimeout(mConfig.getConnTimeOut());
-                mSocketPool.submit(new SocketProcessTask(socket, mConfig));
+                if (ProxyCacheUtils.getConfig().getConnTimeOut() > 0)
+                    socket.setSoTimeout(ProxyCacheUtils.getConfig().getConnTimeOut());
+                mSocketPool.submit(new SocketProcessTask(socket));
             } catch (Exception e) {
                 LogUtils.w(TAG, "WaitRequestsRun ServerSocket accept failed, exception=" + e);
             }

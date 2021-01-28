@@ -27,7 +27,6 @@ import java.util.Map;
 public class VideoProxyCacheManager {
 
     private static volatile VideoProxyCacheManager sInstance = null;
-    private VideoCacheConfig mProxyConfig;
     private Handler mProxyHandler;
 
     public static VideoProxyCacheManager getInstance() {
@@ -95,9 +94,8 @@ public class VideoProxyCacheManager {
     }
 
     public void initProxyConfig(@NonNull VideoCacheConfig config) {
-        mProxyConfig = config;
-        new VideoLocalProxyServer(config);  //初始化本地代理服务
-        VideoInfoParseManager.getInstance().initProxyConfig(config);
+        ProxyCacheUtils.setVideoCacheConfig(config);
+        new VideoLocalProxyServer();  //初始化本地代理服务
     }
 
     /**
@@ -126,7 +124,7 @@ public class VideoProxyCacheManager {
      */
     public void startVideoRequest(String videoUrl, Map<String, String> headers, Map<String, Object> extraParams) {
         String md5 = ProxyCacheUtils.computeMD5(videoUrl);
-        File saveDir = new File(mProxyConfig.getFilePath(), md5);
+        File saveDir = new File(ProxyCacheUtils.getConfig().getFilePath(), md5);
         VideoCacheInfo cacheInfo = StorageUtils.readVideoCacheInfo(saveDir);
         if (cacheInfo == null) {
             //之前没有缓存信息

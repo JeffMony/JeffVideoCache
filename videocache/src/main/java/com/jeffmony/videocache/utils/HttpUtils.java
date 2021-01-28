@@ -1,7 +1,5 @@
 package com.jeffmony.videocache.utils;
 
-import com.jeffmony.videocache.common.VideoCacheConfig;
-
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.NoRouteToHostException;
@@ -17,13 +15,13 @@ import java.util.Map;
 
 public class HttpUtils {
 
-    public static int MAX_REDIRECT = 5;
+    private static final int MAX_REDIRECT = 5;
 
-    public static HttpURLConnection getConnection(String videoUrl, Map<String, String> headers, VideoCacheConfig config) throws IOException {
+    public static HttpURLConnection getConnection(String videoUrl, Map<String, String> headers) throws IOException {
         URL url = new URL(videoUrl);
         int redirectCount = 0;
         while (redirectCount < MAX_REDIRECT) {
-            HttpURLConnection connection = makeConnection(url, headers, config);
+            HttpURLConnection connection = makeConnection(url, headers);
             int responseCode = connection.getResponseCode();
             if (responseCode == HttpURLConnection.HTTP_MULT_CHOICE ||
                     responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
@@ -53,11 +51,11 @@ public class HttpUtils {
         return url;
     }
 
-    private static HttpURLConnection makeConnection(URL url, Map<String, String> headers, VideoCacheConfig config) throws IOException {
+    private static HttpURLConnection makeConnection(URL url, Map<String, String> headers) throws IOException {
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setInstanceFollowRedirects(false);   //因为我们内部已经做了重定向的功能,不需要在connection内部再做了.
-        connection.setConnectTimeout(config.getConnTimeOut());
-        connection.setReadTimeout(config.getReadTimeOut());
+        connection.setConnectTimeout(ProxyCacheUtils.getConfig().getConnTimeOut());
+        connection.setReadTimeout(ProxyCacheUtils.getConfig().getReadTimeOut());
         if (headers != null) {
             for (Map.Entry<String, String> item : headers.entrySet()) {
                 connection.setRequestProperty(item.getKey(), item.getValue());
