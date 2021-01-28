@@ -4,7 +4,6 @@ import android.text.TextUtils;
 
 import com.jeffmony.videocache.utils.UrlUtils;
 
-import java.net.URL;
 import java.util.List;
 
 /**
