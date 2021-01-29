@@ -8,6 +8,8 @@ import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.common.VideoType;
 import com.jeffmony.videocache.common.VideoParams;
 import com.jeffmony.videocache.listener.IVideoInfoParsedListener;
+import com.jeffmony.videocache.m3u8.M3U8;
+import com.jeffmony.videocache.m3u8.M3U8Utils;
 import com.jeffmony.videocache.model.VideoCacheInfo;
 import com.jeffmony.videocache.utils.HttpUtils;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
@@ -108,6 +110,12 @@ public class VideoInfoParseManager {
 
     private void parseM3U8Info(VideoCacheInfo cacheInfo) {
         cacheInfo.setVideoType(VideoType.HLS_TYPE);
+        try {
+            M3U8 m3u8 = M3U8Utils.parseNetworkM3U8Info(cacheInfo.getVideoUrl(), mHeaders);
+            mListener.onM3U8ParsedFinished(m3u8);
+        } catch (Exception e) {
+            mListener.onNonM3U8ParsedFailed(new VideoCacheException("parseM3U8Info failed, " + e.getMessage()));
+        }
     }
 
 }
