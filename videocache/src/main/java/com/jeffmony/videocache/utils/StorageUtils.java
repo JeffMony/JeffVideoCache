@@ -19,6 +19,10 @@ public class StorageUtils {
 
     public static final int DEFAULT_BUFFER_SIZE = 8 * 1024;
     public static final String INFO_FILE = "video.info";
+    public static final String LOCAL_M3U8_SUFFIX = "_local.m3u8";
+    public static final String PROXY_M3U8_SUFFIX = "_proxy.m3u8";
+    public static final String TS_SUFFIX = ".ts";
+
     private static final Object sFileLock = new Object();
 
     public static VideoCacheInfo readVideoCacheInfo(File dir) {

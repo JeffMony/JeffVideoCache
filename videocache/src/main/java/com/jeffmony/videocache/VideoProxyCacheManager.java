@@ -125,10 +125,15 @@ public class VideoProxyCacheManager {
     public void startVideoRequest(String videoUrl, Map<String, String> headers, Map<String, Object> extraParams) {
         String md5 = ProxyCacheUtils.computeMD5(videoUrl);
         File saveDir = new File(ProxyCacheUtils.getConfig().getFilePath(), md5);
+        if (!saveDir.exists()) {
+            saveDir.mkdir();
+        }
         VideoCacheInfo cacheInfo = StorageUtils.readVideoCacheInfo(saveDir);
         if (cacheInfo == null) {
             //之前没有缓存信息
             cacheInfo = new VideoCacheInfo(videoUrl);
+            cacheInfo.setMd5(md5);
+            cacheInfo.setSavePath(saveDir.getAbsolutePath());
         }
 
         VideoInfoParseManager.getInstance().parseVideoInfo(cacheInfo, headers, extraParams, new IVideoInfoParsedListener() {

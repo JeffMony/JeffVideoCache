@@ -10,6 +10,9 @@ public class VideoCacheInfo implements Serializable {
     private long mTotalSize;                       //总大小
     private int mCachedTs;                         //已经缓存的ts个数
     private int mTotalTs;                          //总的ts个数
+    private String mMd5;                           //videourl对应的md5
+    private String mSavePath;                      //videocacheinfo存储的目录
+    private int mLocalPort;                        //本地代理的端口号，每次可能不一样
     private Map<Integer, Long> mTsLengthMap;       //key表示ts的索引，value表示索引分片的content-length
 
     public VideoCacheInfo(String url) {
@@ -55,6 +58,18 @@ public class VideoCacheInfo implements Serializable {
     public void setTotalTs(int totalTs) {
         mTotalTs = totalTs;
     }
+
+    public void setMd5(String md5) { mMd5 = md5; }
+
+    public String getMd5() { return mMd5; }
+
+    public void setSavePath(String savePath) { mSavePath = savePath; }
+
+    public String getSavePath() { return mSavePath; }
+
+    public void setLocalPort(int port) { mLocalPort = port; }
+
+    public int getLocalPort() { return mLocalPort; }
 
     public void setTsLengthMap(Map<Integer, Long> tsLengthMap) {
         mTsLengthMap = tsLengthMap;

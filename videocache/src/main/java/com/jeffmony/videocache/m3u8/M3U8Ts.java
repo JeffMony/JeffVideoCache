@@ -1,5 +1,12 @@
 package com.jeffmony.videocache.m3u8;
 
+import com.jeffmony.videocache.utils.ProxyCacheUtils;
+import com.jeffmony.videocache.utils.StorageUtils;
+
+import java.io.File;
+import java.util.Locale;
+import java.util.Map;
+
 /**
  * @author jeffmony
  *
@@ -114,6 +121,19 @@ public class M3U8Ts implements Comparable<M3U8Ts> {
     @Override
     public int hashCode() {
         return super.hashCode();
+    }
+
+    public String getTsProxyUrl(String md5, Map<String, String> headers) {
+        //三个字符串
+        //1.ts的url
+        //2.ts存储的位置
+        //3.ts url对应的请求headers
+        String proxyExtraInfo = mUrl + ProxyCacheUtils.TS_PROXY_SPLIT_STR +
+                File.separator + md5 + File.separator + mTsIndex + StorageUtils.TS_SUFFIX +
+                ProxyCacheUtils.TS_PROXY_SPLIT_STR + ProxyCacheUtils.map2Str(headers);
+        String proxyUrl = String.format(Locale.US, "http://%s:%d/%s", ProxyCacheUtils.LOCAL_PROXY_HOST,
+                ProxyCacheUtils.getLocalPort(), ProxyCacheUtils.encodeUri(proxyExtraInfo));
+        return proxyUrl;
     }
 
 }
