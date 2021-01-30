@@ -7,8 +7,6 @@ import com.jeffmony.videocache.common.VideoCacheConfig;
 import com.jeffmony.videocache.common.VideoMime;
 
 import java.io.Closeable;
-import java.io.File;
-import java.net.URLDecoder;
 import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;

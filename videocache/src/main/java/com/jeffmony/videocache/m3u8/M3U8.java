@@ -4,6 +4,7 @@ import android.text.TextUtils;
 
 import com.jeffmony.videocache.utils.UrlUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -25,6 +26,7 @@ public class M3U8 {
         mUrl = url;
         mBaseUrl = UrlUtils.getBaseUrl(url);
         mHostUrl = UrlUtils.getHostUrl(url);
+        mTsList = new ArrayList<>();
     }
 
     public String getUrl() {
@@ -85,6 +87,10 @@ public class M3U8 {
             duration += ts.getDuration();
         }
         return duration;
+    }
+
+    public int getTsCount() {
+        return mTsList.size();
     }
 
     @Override

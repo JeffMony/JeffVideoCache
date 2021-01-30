@@ -23,7 +23,7 @@ public class StorageUtils {
     public static final String PROXY_M3U8_SUFFIX = "_proxy.m3u8";
     public static final String TS_SUFFIX = ".ts";
 
-    private static final Object sFileLock = new Object();
+    private static final Object sInfoFileLock = new Object();
 
     public static VideoCacheInfo readVideoCacheInfo(File dir) {
         File file = new File(dir, INFO_FILE);
@@ -33,7 +33,7 @@ public class StorageUtils {
         }
         ObjectInputStream fis = null;
         try {
-            synchronized (sFileLock) {
+            synchronized (sInfoFileLock) {
                 fis = new ObjectInputStream(new FileInputStream(file));
                 VideoCacheInfo info = (VideoCacheInfo) fis.readObject();
                 return info;
@@ -56,7 +56,7 @@ public class StorageUtils {
         File file = new File(dir, INFO_FILE);
         ObjectOutputStream fos = null;
         try {
-            synchronized (sFileLock) {
+            synchronized (sInfoFileLock) {
                 fos = new ObjectOutputStream(new FileOutputStream(file));
                 fos.writeObject(info);
             }
