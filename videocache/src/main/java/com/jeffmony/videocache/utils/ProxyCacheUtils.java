@@ -1,14 +1,17 @@
 package com.jeffmony.videocache.utils;
 
+import android.net.Uri;
 import android.text.TextUtils;
 import android.util.Base64;
 
 import com.jeffmony.videocache.common.VideoCacheConfig;
 import com.jeffmony.videocache.common.VideoMime;
+import com.jeffmony.videocache.common.VideoParams;
 
 import java.io.Closeable;
 import java.security.MessageDigest;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -22,10 +25,12 @@ public class ProxyCacheUtils {
 
     public static final String LOCAL_PROXY_HOST = "127.0.0.1";
     public static final String LOCAL_PROXY_URL = "http://" + LOCAL_PROXY_HOST;
-    public static final String TS_PROXY_SPLIT_STR = "&jeffmony_ts&";
-    public static final String VIDEO_PROXY_SPLIT_STR = "&jeffmony_video&";
-    public static final String HEADER_SPLIT_STR = "&jeffmony_header&";
+    public static final String TS_PROXY_SPLIT_STR = "&jeffmony_ts&";             //ts文件分隔符
+    public static final String VIDEO_PROXY_SPLIT_STR = "&jeffmony_video&";       //视频分隔符
+    public static final String HEADER_SPLIT_STR = "&jeffmony_header&";           //请求头部分隔符
     public static final String UNKNOWN = "unknown";
+    public static final String M3U8 = "m3u8";
+    public static final String NON_M3U8 = "non_m3u8";
 
     private static VideoCacheConfig sConfig;
     private static int sLocalPort = 0;
@@ -83,6 +88,20 @@ public class ProxyCacheUtils {
                 mimeType.contains(VideoMime.MIME_TYPE_M3U8_5);
     }
 
+    private static boolean isVideoMimeType(String mimeType) {
+        if (mimeType.startsWith("video/")) {
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean isAudioMimeType(String mimeType) {
+        if (mimeType.startsWith("audio/")) {
+            return true;
+        }
+        return false;
+    }
+
     public static String encodeUri(String str) {
         try {
             return Base64.encodeToString(str.getBytes("utf-8"), Base64.DEFAULT);
@@ -121,5 +140,51 @@ public class ProxyCacheUtils {
             }
         }
         return headers;
+    }
+
+    public static String getProxyUrl(String videoUrl, Map<String, String> headers, Map<String, Object> cacheParams) {
+        String videoInfo = getVideoTypeInfo(videoUrl, cacheParams);
+        String headerStr = map2Str(headers);
+        String proxyExtraInfo = videoUrl + VIDEO_PROXY_SPLIT_STR + videoInfo + VIDEO_PROXY_SPLIT_STR + headerStr;
+        //http://127.0.0.1:port/base64-parameter
+        String proxyUrl = String.format(Locale.US, "http://%s:%d/%s", LOCAL_PROXY_HOST, sLocalPort, encodeUri(proxyExtraInfo));
+        return proxyUrl;
+    }
+
+    private static String getVideoTypeInfo(String videoUrl, Map<String, Object> cacheParams) {
+        String contentType = VideoParamsUtils.getStringValue(cacheParams, VideoParams.CONTENT_TYPE);
+        LogUtils.i(TAG, "getProxyUrl contentType="+contentType + ", videoUrl="+videoUrl);
+        String videoInfo;
+        if (!TextUtils.equals(VideoParams.UNKNOWN, contentType)) {
+            if (isM3U8Mimetype(contentType)) {
+                videoInfo = M3U8;      //已知是M3U8类型
+            } else if (isVideoMimeType(contentType) || isAudioMimeType(contentType)) {
+                videoInfo = NON_M3U8;  // 已知是非M3U8类型
+            } else {
+                videoInfo = getVideoTypeInfo(videoUrl);
+            }
+        } else {
+            videoInfo = getVideoTypeInfo(videoUrl);
+        }
+        return videoInfo;
+    }
+
+    private static String getVideoTypeInfo(String videoUrl) {
+        String videoInfo;
+        Uri videoUri = Uri.parse(videoUrl);
+        String fileName = videoUri.getLastPathSegment();
+        if (!TextUtils.isEmpty(fileName)) {
+            fileName = fileName.toLowerCase();
+            if (fileName.endsWith(StorageUtils.M3U8_SUFFIX)) {
+                videoInfo = M3U8;
+            } else {
+                videoInfo = NON_M3U8;
+            }
+        } else if (videoUrl.contains(M3U8)) {
+            videoInfo = M3U8;
+        } else {
+            videoInfo = UNKNOWN;
+        }
+        return videoInfo;
     }
 }

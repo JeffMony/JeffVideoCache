@@ -38,6 +38,7 @@ public class VideoProxyCacheManager {
     private ProxyMessageHandler mProxyHandler;
 
     private Map<String, VideoCacheTask> mCacheTaskMap = new ConcurrentHashMap<>();
+    private Map<String, VideoCacheInfo> mCacheInfoMap = new ConcurrentHashMap<>();
 
     public static VideoProxyCacheManager getInstance() {
         if (sInstance == null) {
@@ -189,6 +190,12 @@ public class VideoProxyCacheManager {
 
     }
 
+    /**
+     * 开始缓存M3U8任务
+     * @param m3u8
+     * @param cacheInfo
+     * @param headers
+     */
     private void startM3U8Task(M3U8 m3u8, VideoCacheInfo cacheInfo, Map<String, String> headers) {
         VideoCacheTask cacheTask = mCacheTaskMap.get(cacheInfo.getVideoUrl());
         if (cacheTask == null) {
@@ -197,6 +204,11 @@ public class VideoProxyCacheManager {
         startVideoCacheTask(cacheTask, cacheInfo);
     }
 
+    /**
+     * 开始缓存非M3U8任务
+     * @param cacheInfo
+     * @param headers
+     */
     private void startNonM3U8Task(VideoCacheInfo cacheInfo, Map<String, String> headers) {
         VideoCacheTask cacheTask = mCacheTaskMap.get(cacheInfo.getVideoUrl());
         if (cacheTask == null) {
@@ -234,6 +246,28 @@ public class VideoProxyCacheManager {
         });
 
         cacheTask.startCacheTask();
+    }
+
+    /**
+     * 暂停缓存任务
+     * @param url
+     */
+    public void pauseCacheTask(String url) {
+        VideoCacheTask cacheTask = mCacheTaskMap.get(url);
+        if (cacheTask != null) {
+            cacheTask.pauseCacheTask();
+        }
+    }
+
+    /**
+     * 恢复缓存任务
+     * @param url
+     */
+    public void resumeCacheTask(String url) {
+        VideoCacheTask cacheTask = mCacheTaskMap.get(url);
+        if (cacheTask != null) {
+            cacheTask.resumeCacheTask();
+        }
     }
 
 }
