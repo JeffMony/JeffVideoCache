@@ -113,6 +113,10 @@ public class M3U8Ts implements Comparable<M3U8Ts> {
         this.mKeyIv = mKeyIv;
     }
 
+    public String getTsName() {
+        return mTsIndex + StorageUtils.TS_SUFFIX;
+    }
+
     @Override
     public int compareTo(M3U8Ts m3u8Ts) {
         return mUrl.compareTo(m3u8Ts.getUrl());

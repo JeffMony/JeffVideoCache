@@ -18,7 +18,8 @@ public abstract class VideoCacheTask {
     protected IVideoCacheTaskListener mListener;
     protected ThreadPoolExecutor mTaskExecutor;
 
-    protected long mCachedSize;
+    protected long mCachedSize;      //当前缓存大小
+    protected long mLastCachedSize;  //上一次缓存大小
     protected long mTotalSize;
     protected boolean mIsCompleted;
     protected File mSaveDir;
@@ -43,6 +44,10 @@ public abstract class VideoCacheTask {
 
     public abstract void pauseCacheTask();
 
+    public abstract void seekToCacheTask(int curTs);
+
+    public abstract void seekToCacheTask(long curLength);
+
     public abstract void resumeCacheTask();
 
 
@@ -56,6 +61,10 @@ public abstract class VideoCacheTask {
 
     protected void notifyOnTaskCompleted() {
         mListener.onTaskCompleted();
+    }
+
+    protected boolean isTaskRunning() {
+        return mTaskExecutor != null && !mTaskExecutor.isShutdown();
     }
 
     protected void saveVideoInfo() {

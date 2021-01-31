@@ -16,13 +16,11 @@ public class NonM3U8CacheTask extends VideoCacheTask {
 
     @Override
     public void startCacheTask() {
-        if (mIsCompleted) {
-            notifyOnTaskCompleted();
+        if (isTaskRunning()) {
             return;
         }
-        mTaskExecutor = new ThreadPoolExecutor(6, 6,
-                0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
-                Executors.defaultThreadFactory(), new ThreadPoolExecutor.DiscardOldestPolicy());
+        notifyOnTaskStart();
+
     }
 
     @Override
@@ -33,5 +31,21 @@ public class NonM3U8CacheTask extends VideoCacheTask {
     @Override
     public void resumeCacheTask() {
 
+    }
+
+    @Override
+    public void seekToCacheTask(int curTs) {
+        //非M3U8视频忽略这个调用
+    }
+
+    @Override
+    public void seekToCacheTask(long curLength) {
+        if (mIsCompleted) {
+            notifyOnTaskCompleted();
+            return;
+        }
+        mTaskExecutor = new ThreadPoolExecutor(6, 6,
+                0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
+                Executors.defaultThreadFactory(), new ThreadPoolExecutor.DiscardOldestPolicy());
     }
 }
