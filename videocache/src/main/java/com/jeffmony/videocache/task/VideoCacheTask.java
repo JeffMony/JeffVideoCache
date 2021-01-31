@@ -4,7 +4,10 @@ import androidx.annotation.NonNull;
 
 import com.jeffmony.videocache.listener.IVideoCacheTaskListener;
 import com.jeffmony.videocache.model.VideoCacheInfo;
+import com.jeffmony.videocache.utils.StorageUtils;
+import com.jeffmony.videocache.utils.VideoProxyThreadUtils;
 
+import java.io.File;
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -18,6 +21,7 @@ public abstract class VideoCacheTask {
     protected long mCachedSize;
     protected long mTotalSize;
     protected boolean mIsCompleted;
+    protected File mSaveDir;
 
     public VideoCacheTask(VideoCacheInfo cacheInfo, Map<String, String> headers) {
         mCacheInfo = cacheInfo;
@@ -25,6 +29,10 @@ public abstract class VideoCacheTask {
         mCachedSize = cacheInfo.getCachedSize();
         mTotalSize = cacheInfo.getTotalSize();
         mIsCompleted = cacheInfo.isCompleted();
+        mSaveDir = new File(cacheInfo.getSavePath(), cacheInfo.getMd5());
+        if (!mSaveDir.exists()) {
+            mSaveDir.mkdir();
+        }
     }
 
     public void setTaskListener(@NonNull IVideoCacheTaskListener listener) {
@@ -48,5 +56,14 @@ public abstract class VideoCacheTask {
 
     protected void notifyOnTaskCompleted() {
         mListener.onTaskCompleted();
+    }
+
+    protected void saveVideoInfo() {
+        VideoProxyThreadUtils.submitRunnableTask(new Runnable() {
+            @Override
+            public void run() {
+                StorageUtils.saveVideoCacheInfo(mCacheInfo, mSaveDir);
+            }
+        });
     }
 }

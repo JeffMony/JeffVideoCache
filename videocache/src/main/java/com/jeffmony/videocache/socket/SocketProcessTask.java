@@ -1,13 +1,19 @@
 package com.jeffmony.videocache.socket;
 
+import android.text.TextUtils;
+
+import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.socket.request.HttpRequest;
 import com.jeffmony.videocache.socket.response.BaseResponse;
+import com.jeffmony.videocache.socket.response.M3U8Response;
+import com.jeffmony.videocache.socket.response.Mp4Response;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
 
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SocketProcessTask implements Runnable {
@@ -30,7 +36,39 @@ public class SocketProcessTask implements Runnable {
             HttpRequest request = new HttpRequest(inputStream, mSocket.getInetAddress());
             while(!mSocket.isClosed()) {
                 request.parseRequest();
-                BaseResponse response;
+                BaseResponse response = null;
+
+                String url = request.getUri();
+                LogUtils.i(TAG, "request url=" + url);
+
+                url = url.substring(1);
+                if (url.contains(ProxyCacheUtils.VIDEO_PROXY_SPLIT_STR)) {
+                    String[] videoInfoArr = url.split(ProxyCacheUtils.VIDEO_PROXY_SPLIT_STR);
+                    if (videoInfoArr.length < 3) {
+                        throw new VideoCacheException("Local Socket Error Argument");
+                    }
+                    String videoUrl = videoInfoArr[0];
+                    String videoTypeInfo = videoInfoArr[1];
+                    String videoHeaders = videoInfoArr[2];
+
+                    Map<String, String> headers = ProxyCacheUtils.str2Map(videoHeaders);
+                    LogUtils.i(TAG, videoUrl + "\n" + videoTypeInfo + "\n" + videoHeaders);
+
+                    if (TextUtils.equals(ProxyCacheUtils.M3U8, videoTypeInfo)) {
+                        response = new M3U8Response(request, videoUrl, headers);
+                    } else if (TextUtils.equals(ProxyCacheUtils.NON_M3U8, videoTypeInfo)) {
+                        response = new Mp4Response(request, videoUrl, headers);
+                    } else {
+                        //无法从已知的信息判定视频信息，需要重新请求
+                    }
+                } else if (url.contains(ProxyCacheUtils.TS_PROXY_SPLIT_STR)) {
+                    //说明是M3U8 ts格式的文件
+                } else {
+
+                }
+
+                response.sendResponse(mSocket, outputStream);
+
             }
 
         } catch (Exception e) {

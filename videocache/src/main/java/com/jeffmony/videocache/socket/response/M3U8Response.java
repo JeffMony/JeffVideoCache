@@ -1,6 +1,5 @@
 package com.jeffmony.videocache.socket.response;
 
-import com.jeffmony.videocache.common.VideoCacheConfig;
 import com.jeffmony.videocache.socket.request.HttpRequest;
 
 import java.io.OutputStream;
@@ -13,8 +12,8 @@ import java.util.Map;
  */
 public class M3U8Response extends BaseResponse {
 
-    public M3U8Response(HttpRequest request, VideoCacheConfig config, String videoUrl, Map<String, String> headers) {
-        super(request, config, videoUrl, headers);
+    public M3U8Response(HttpRequest request, String videoUrl, Map<String, String> headers) {
+        super(request, videoUrl, headers);
     }
 
     @Override

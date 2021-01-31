@@ -2,13 +2,13 @@ package com.jeffmony.videocache.socket.response;
 
 import android.text.TextUtils;
 
-import com.jeffmony.videocache.common.VideoCacheConfig;
 import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.socket.request.ChunkedOutputStream;
 import com.jeffmony.videocache.socket.request.ContentType;
 import com.jeffmony.videocache.socket.request.HttpRequest;
 import com.jeffmony.videocache.socket.request.IState;
 import com.jeffmony.videocache.socket.request.Method;
+import com.jeffmony.videocache.utils.ProxyCacheUtils;
 
 import java.io.BufferedWriter;
 import java.io.OutputStream;
@@ -32,7 +32,6 @@ public abstract class BaseResponse {
     protected static final int MAX_WAIT_TIME = 2 * 1000;
 
     protected final HttpRequest mRequest;
-    protected final VideoCacheConfig mConfig;
     protected final String mCachePath;
     protected final String mVideoUrl;
     protected Map<String, String> mHeaders;
@@ -40,10 +39,9 @@ public abstract class BaseResponse {
     protected final String mProtocolVersion;
     protected IState mResponseState;
 
-    public BaseResponse(HttpRequest request, VideoCacheConfig config, String videoUrl, Map<String, String> headers) {
+    public BaseResponse(HttpRequest request, String videoUrl, Map<String, String> headers) {
         mRequest = request;
-        mConfig = config;
-        mCachePath = config.getFilePath();
+        mCachePath = ProxyCacheUtils.getConfig().getFilePath();
         mVideoUrl = videoUrl;
         mHeaders = headers;
         mMimeType = request.getMimeType();
