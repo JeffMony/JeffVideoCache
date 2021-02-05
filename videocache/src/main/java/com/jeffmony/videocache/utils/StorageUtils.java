@@ -1,5 +1,7 @@
 package com.jeffmony.videocache.utils;
 
+import android.content.Context;
+
 import com.jeffmony.videocache.model.VideoCacheInfo;
 
 import java.io.File;
@@ -25,6 +27,10 @@ public class StorageUtils {
     public static final String M3U8_SUFFIX = ".m3u8";
 
     private static final Object sInfoFileLock = new Object();
+
+    public static File getVideoFileDir(Context context) {
+        return new File(context.getExternalFilesDir("Video"), "jeffmony");
+    }
 
     public static VideoCacheInfo readVideoCacheInfo(File dir) {
         File file = new File(dir, INFO_FILE);

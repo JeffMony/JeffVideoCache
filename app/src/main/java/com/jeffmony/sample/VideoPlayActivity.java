@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.view.Surface;
 import android.view.TextureView;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.Toast;
 
