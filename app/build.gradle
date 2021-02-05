@@ -12,8 +12,6 @@ android {
         targetSdkVersion 30
         versionCode 1
         versionName "1.0"
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -30,4 +28,6 @@ android {
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation project(path: ':playersdk')
+    implementation project(path: ':videocache')
 }

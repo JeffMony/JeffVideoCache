@@ -5,6 +5,7 @@ import android.net.Uri;
 import android.view.Surface;
 
 import com.jeffmony.playersdk.IPlayer;
+import com.jeffmony.videocache.utils.VideoProxyThreadUtils;
 
 import java.io.IOException;
 import java.util.Map;
@@ -63,23 +64,38 @@ public abstract class BasePlayerImpl {
     }
 
     protected void notifyOnPrepared() {
-        if (mOnPreparedListener != null) {
-            mOnPreparedListener.onPrepared();
-        }
+        VideoProxyThreadUtils.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (mOnPreparedListener != null) {
+                    mOnPreparedListener.onPrepared();
+                }
+            }
+        });
     }
 
     protected void notifyOnVideoSizeChanged(int width, int height,
                                             int rotationDegree,
                                             float pixelRatio,
                                             float darRatio) {
-        if (mOnVideoSizeChangedListener != null) {
-            mOnVideoSizeChangedListener.onVideoSizeChanged(width, height, rotationDegree, pixelRatio, darRatio);
-        }
+        VideoProxyThreadUtils.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (mOnVideoSizeChangedListener != null) {
+                    mOnVideoSizeChangedListener.onVideoSizeChanged(width, height, rotationDegree, pixelRatio, darRatio);
+                }
+            }
+        });
     }
 
     protected void notifyOnError(int what, String msg) {
-        if (mOnErrorListener != null) {
-            mOnErrorListener.onError(what, msg);
-        }
+        VideoProxyThreadUtils.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (mOnErrorListener != null) {
+                    mOnErrorListener.onError(what, msg);
+                }
+            }
+        });
     }
 }

@@ -134,17 +134,13 @@ public class ExoPlayerImpl extends BasePlayerImpl {
         DataSource.Factory dataSourceFactory = buildDataSourceFactory();
         switch (type) {
             case C.TYPE_DASH:
-                return new DashMediaSource.Factory(dataSourceFactory)
-                        .createMediaSource(uri);
+                return new DashMediaSource.Factory(dataSourceFactory).createMediaSource(uri);
             case C.TYPE_SS:
-                return new SsMediaSource.Factory(dataSourceFactory)
-                        .createMediaSource(uri);
+                return new SsMediaSource.Factory(dataSourceFactory).createMediaSource(uri);
             case C.TYPE_HLS:
-                return new HlsMediaSource.Factory(dataSourceFactory)
-                        .createMediaSource(uri);
+                return new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(uri);
             case C.TYPE_OTHER:
-                return new ProgressiveMediaSource.Factory(dataSourceFactory)
-                        .createMediaSource(uri);
+                return new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(uri);
             default:
                 throw new IllegalStateException("Unsupported type: " + type);
         }
