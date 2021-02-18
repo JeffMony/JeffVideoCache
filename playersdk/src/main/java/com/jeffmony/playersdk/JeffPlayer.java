@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.Uri;
 import android.view.Surface;
 
+import com.jeffmony.playersdk.common.PlayerSettings;
 import com.jeffmony.playersdk.common.PlayerType;
 import com.jeffmony.playersdk.impl.BasePlayerImpl;
 import com.jeffmony.playersdk.impl.ExoPlayerImpl;
@@ -26,6 +27,11 @@ public class JeffPlayer implements IPlayer {
         } else {
             mPlayerImpl = new IjkPlayerImpl(context);
         }
+    }
+
+    @Override
+    public void initPlayerSettings(PlayerSettings settings) {
+        mPlayerImpl.initPlayerSettings(settings);
     }
 
     @Override
@@ -66,6 +72,11 @@ public class JeffPlayer implements IPlayer {
     @Override
     public long getCurrentPosition() {
         return mPlayerImpl.getCurrentPosition();
+    }
+
+    @Override
+    public long getBufferedPosition() {
+        return mPlayerImpl.getBufferedPosition();
     }
 
     @Override

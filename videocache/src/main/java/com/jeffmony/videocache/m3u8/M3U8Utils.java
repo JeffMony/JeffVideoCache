@@ -259,8 +259,7 @@ public class M3U8Utils {
                 bfw.write(Constants.TAG_DISCONTINUITY + "\n");
             }
             bfw.write(Constants.TAG_MEDIA_DURATION + ":" + m3u8Ts.getDuration() + ",\n");
-            bfw.write(m3u8Ts.getTsProxyUrl(md5, headers) + "\n");
-            bfw.newLine();
+            bfw.write(m3u8Ts.getTsProxyUrl(md5, headers));
         }
         bfw.write(Constants.TAG_ENDLIST);
         bfw.flush();

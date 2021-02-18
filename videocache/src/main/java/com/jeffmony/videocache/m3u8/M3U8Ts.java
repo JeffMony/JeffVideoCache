@@ -136,7 +136,7 @@ public class M3U8Ts implements Comparable<M3U8Ts> {
                 File.separator + md5 + File.separator + mTsIndex + StorageUtils.TS_SUFFIX +
                 ProxyCacheUtils.TS_PROXY_SPLIT_STR + ProxyCacheUtils.map2Str(headers);
         String proxyUrl = String.format(Locale.US, "http://%s:%d/%s", ProxyCacheUtils.LOCAL_PROXY_HOST,
-                ProxyCacheUtils.getLocalPort(), ProxyCacheUtils.encodeUri(proxyExtraInfo));
+                ProxyCacheUtils.getLocalPort(), ProxyCacheUtils.encodeUriWithBase64(proxyExtraInfo));
         return proxyUrl;
     }
 

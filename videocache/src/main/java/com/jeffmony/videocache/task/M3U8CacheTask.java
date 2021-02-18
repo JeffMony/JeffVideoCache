@@ -99,15 +99,12 @@ public class M3U8CacheTask extends VideoCacheTask {
         for (int index = curTs; index < mTotalTs; index++) {
             final M3U8Ts ts = mTsList.get(index);
             final int tsIndex = index;
-            mTaskExecutor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        downloadTsTask(ts, tsIndex);
-                    } catch (Exception e) {
-                        LogUtils.w(TAG, "M3U8 ts video download failed, exception=" + e);
-                        notifyOnTaskFailed(e);
-                    }
+            mTaskExecutor.execute(() -> {
+                try {
+                    downloadTsTask(ts, tsIndex);
+                } catch (Exception e) {
+                    LogUtils.w(TAG, "M3U8 ts video download failed, exception=" + e);
+                    notifyOnTaskFailed(e);
                 }
             });
         }

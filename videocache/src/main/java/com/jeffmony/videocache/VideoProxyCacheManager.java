@@ -4,12 +4,14 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
+import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 
 import com.jeffmony.videocache.common.ProxyMessage;
 import com.jeffmony.videocache.common.VideoCacheConfig;
 import com.jeffmony.videocache.common.VideoCacheException;
+import com.jeffmony.videocache.listener.IVideoCacheListener;
 import com.jeffmony.videocache.listener.IVideoCacheTaskListener;
 import com.jeffmony.videocache.listener.IVideoInfoParsedListener;
 import com.jeffmony.videocache.m3u8.M3U8;
@@ -39,6 +41,7 @@ public class VideoProxyCacheManager {
 
     private Map<String, VideoCacheTask> mCacheTaskMap = new ConcurrentHashMap<>();
     private Map<String, VideoCacheInfo> mCacheInfoMap = new ConcurrentHashMap<>();
+    private Map<String, IVideoCacheListener> mCacheListenerMap = new ConcurrentHashMap<>();
 
     public static VideoProxyCacheManager getInstance() {
         if (sInstance == null) {
@@ -53,8 +56,8 @@ public class VideoProxyCacheManager {
 
     private VideoProxyCacheManager() {
         HandlerThread handlerThread = new HandlerThread("proxy_cache_thread");
-        mProxyHandler = new ProxyMessageHandler(handlerThread.getLooper());
         handlerThread.start();
+        mProxyHandler = new ProxyMessageHandler(handlerThread.getLooper());
     }
 
     private class ProxyMessageHandler extends Handler {
@@ -119,6 +122,17 @@ public class VideoProxyCacheManager {
     public void initProxyConfig(@NonNull VideoCacheConfig config) {
         ProxyCacheUtils.setVideoCacheConfig(config);
         new VideoLocalProxyServer();  //初始化本地代理服务
+    }
+
+    public void addCacheListener(String videoUrl, @NonNull IVideoCacheListener listener) {
+        if (TextUtils.isEmpty(videoUrl)) {
+            return;
+        }
+        mCacheListenerMap.put(videoUrl, listener);
+    }
+
+    public void removeCacheListener(String videoUrl) {
+        mCacheListenerMap.remove(videoUrl);
     }
 
     /**

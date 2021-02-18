@@ -4,10 +4,14 @@ import android.app.Activity;
 import android.graphics.SurfaceTexture;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.view.Surface;
 import android.view.TextureView;
+import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -15,11 +19,18 @@ import androidx.annotation.Nullable;
 
 import com.jeffmony.playersdk.IPlayer;
 import com.jeffmony.playersdk.JeffPlayer;
+import com.jeffmony.playersdk.common.PlayerSettings;
 import com.jeffmony.videocache.utils.LogUtils;
+import com.jeffmony.videocache.utils.TimeUtils;
 
 public class VideoPlayActivity extends Activity {
 
     private static final String TAG = "VideoPlayActivity";
+
+    private final static int MSG_UPDATE_VIDEOSIZE = 1;
+    private final static int MSG_UPDATE_VIDEOTIME = 2;
+
+    private final static int MAX_PROGRESS = 1000;
 
     private String mVideoUrl;
     private Surface mSurface;
@@ -27,9 +38,23 @@ public class VideoPlayActivity extends Activity {
     private Size mScreenSize;
     private int mVideoWidth;
     private int mVideoHeight;
+    private boolean mLocalProxyEnable;
 
     private TextureView mVideoView;
     private SeekBar mProgressView;
+    private TextView mTimeView;
+
+    private final Handler mHandler = new Handler() {
+        @Override
+        public void handleMessage(@NonNull Message msg) {
+            super.handleMessage(msg);
+            if (msg.what == MSG_UPDATE_VIDEOSIZE) {
+                updateVideoSurfaceSize(mVideoWidth, mVideoHeight);
+            } else if (msg.what == MSG_UPDATE_VIDEOTIME) {
+                updateVideoTimeInfo();
+            }
+        }
+    };
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -38,14 +63,11 @@ public class VideoPlayActivity extends Activity {
         mScreenSize = ScreenUtils.getScreenSize(this.getApplicationContext());
 
         mVideoUrl = getIntent().getStringExtra("video_url");
+        mLocalProxyEnable = getIntent().getBooleanExtra("local_proxy_enable", false);
 
         mVideoView = findViewById(R.id.video_textureview);
         mProgressView = findViewById(R.id.video_progress_view);
-
-        float ratio = (mScreenSize.getWidth() > mScreenSize.getHeight()) ? mScreenSize.getHeight() * 1.0f / mScreenSize.getWidth() : mScreenSize.getWidth() * 1.0f / mScreenSize.getHeight();
-        int width = mScreenSize.getWidth();
-        int height = (int) (ratio * width);
-        mVideoView.setLayoutParams(new LinearLayout.LayoutParams(width, height));
+        mTimeView = findViewById(R.id.video_time_view);
 
         mVideoView.setSurfaceTextureListener(mTextureListener);
     }
@@ -75,6 +97,10 @@ public class VideoPlayActivity extends Activity {
 
     private void initPlayerSettings() {
         mPlayer = new JeffPlayer(this.getApplicationContext());
+        PlayerSettings playerSettings = new PlayerSettings();
+        playerSettings.setLocalProxyEnable(mLocalProxyEnable);
+        mPlayer.initPlayerSettings(playerSettings);
+
         mPlayer.setOnPreparedListener(mOnPreparedListener);
         mPlayer.setOnVideoSizeChangedListener(mOnVideoSizeChangedListener);
         mPlayer.setSurface(mSurface);
@@ -91,6 +117,7 @@ public class VideoPlayActivity extends Activity {
     private IPlayer.OnPreparedListener mOnPreparedListener = new IPlayer.OnPreparedListener() {
         @Override
         public void onPrepared() {
+            mHandler.sendEmptyMessage(MSG_UPDATE_VIDEOTIME);
             mPlayer.start();
         }
     };
@@ -101,12 +128,46 @@ public class VideoPlayActivity extends Activity {
             LogUtils.i(TAG, "onVideoSizeChanged width="+width+", height="+height);
             mVideoWidth = width;
             mVideoHeight = height;
+            mHandler.sendEmptyMessage(MSG_UPDATE_VIDEOSIZE);
         }
     };
+
+    private void updateVideoSurfaceSize(int width, int height) {
+        int baseWidth = mScreenSize.getWidth();
+        float ratio = (width > height) ? height * 1.0f / width : width * 1.0f / height;
+        int tempWidth = baseWidth;
+        int tempHeight = (width > height) ? (int)(tempWidth * ratio) : (int)(tempWidth / ratio);
+        mVideoView.setLayoutParams(new LinearLayout.LayoutParams(tempWidth, tempHeight));
+    }
+
+    private void updateVideoTimeInfo() {
+        mTimeView.setVisibility(View.VISIBLE);
+        long totalDuration = mPlayer.getDuration();
+        long currentPosition = mPlayer.getCurrentPosition();
+        mTimeView.setText(TimeUtils.getVideoTimeString(currentPosition) + "/" + TimeUtils.getVideoTimeString(totalDuration));
+
+        int progress;
+        if (totalDuration > 0) {
+            progress = (int) (1.0f * currentPosition / totalDuration * MAX_PROGRESS);
+            mProgressView.setProgress(progress);
+
+            long bufferedPosition = mPlayer.getBufferedPosition();
+            int bufferedProgress = (int) (1.0f * bufferedPosition / totalDuration * MAX_PROGRESS);
+            mProgressView.setSecondaryProgress(bufferedProgress);
+        }
+        mHandler.removeMessages(MSG_UPDATE_VIDEOTIME);
+        mHandler.sendEmptyMessageDelayed(MSG_UPDATE_VIDEOTIME, 1000);
+    }
+
+    private void removeHandlerMsg() {
+        mHandler.removeMessages(MSG_UPDATE_VIDEOSIZE);
+        mHandler.removeMessages(MSG_UPDATE_VIDEOTIME);
+    }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        removeHandlerMsg();
         mPlayer.release();
     }
 }

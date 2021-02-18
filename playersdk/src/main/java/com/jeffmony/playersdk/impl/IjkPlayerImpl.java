@@ -83,6 +83,11 @@ public class IjkPlayerImpl extends BasePlayerImpl {
     }
 
     @Override
+    public long getBufferedPosition() {
+        return 0;
+    }
+
+    @Override
     public long getDuration() {
         return mIjkPlayer.getDuration();
     }

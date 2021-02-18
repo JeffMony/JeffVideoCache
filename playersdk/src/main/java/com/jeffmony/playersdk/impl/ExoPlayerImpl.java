@@ -24,6 +24,7 @@ import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
 import com.google.android.exoplayer2.video.VideoListener;
 import com.jeffmony.videocache.utils.LogUtils;
+import com.jeffmony.videocache.utils.ProxyCacheUtils;
 
 import java.util.Map;
 
@@ -49,7 +50,16 @@ public class ExoPlayerImpl extends BasePlayerImpl {
 
     @Override
     public void setDataSource(Context context, Uri uri, Map<String, String> headers) throws IllegalArgumentException, SecurityException, IllegalStateException {
-        mMediaSource = createMediaSource(uri, null);
+        String playUrl;
+        if (mPlayerSettings.getLocalProxyEnable()) {
+            playUrl = ProxyCacheUtils.getProxyUrl(uri.toString(), null, null);
+
+            //请求放在客户端,非常便于控制
+            mLocalProxyVideoControl.startRequestVideoInfo(uri.toString(), null, null);
+        } else {
+            playUrl = uri.toString();
+        }
+        mMediaSource = createMediaSource(Uri.parse(playUrl), null);
     }
 
     @Override
@@ -90,6 +100,11 @@ public class ExoPlayerImpl extends BasePlayerImpl {
     @Override
     public long getCurrentPosition() {
         return mExoPlayer.getCurrentPosition();
+    }
+
+    @Override
+    public long getBufferedPosition() {
+        return mExoPlayer.getBufferedPosition();
     }
 
     @Override

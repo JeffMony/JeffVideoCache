@@ -102,16 +102,16 @@ public class ProxyCacheUtils {
         return false;
     }
 
-    public static String encodeUri(String str) {
+    public static String encodeUriWithBase64(String str) {
         try {
-            return Base64.encodeToString(str.getBytes("utf-8"), Base64.DEFAULT);
+            return Base64.encodeToString(str.getBytes("utf-8"), Base64.NO_WRAP | Base64.NO_PADDING);
         } catch (Exception e) {
             return str;
         }
     }
 
-    public static String decodeUri(String str) {
-        return new String(Base64.decode(str, Base64.DEFAULT));
+    public static String decodeUriWithBase64(String str) {
+        return new String(Base64.decode(str, Base64.NO_WRAP | Base64.NO_PADDING));
     }
 
     public static String map2Str(Map<String, String> headers) {
@@ -147,7 +147,7 @@ public class ProxyCacheUtils {
         String headerStr = map2Str(headers);
         String proxyExtraInfo = videoUrl + VIDEO_PROXY_SPLIT_STR + videoInfo + VIDEO_PROXY_SPLIT_STR + headerStr;
         //http://127.0.0.1:port/base64-parameter
-        String proxyUrl = String.format(Locale.US, "http://%s:%d/%s", LOCAL_PROXY_HOST, sLocalPort, encodeUri(proxyExtraInfo));
+        String proxyUrl = String.format(Locale.US, "http://%s:%d/%s", LOCAL_PROXY_HOST, sLocalPort, encodeUriWithBase64(proxyExtraInfo));
         return proxyUrl;
     }
 
@@ -187,4 +187,5 @@ public class ProxyCacheUtils {
         }
         return videoInfo;
     }
+
 }

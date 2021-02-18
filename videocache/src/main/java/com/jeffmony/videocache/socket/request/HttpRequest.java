@@ -28,7 +28,6 @@ public class HttpRequest {
     private final BufferedInputStream mInputStream;
     private final String mRemoteIP;
     private final HashMap<String, String> mHeaders;
-    private HashMap<String, String> mParams;
     private Method mMethod;
     private String mUri;
     private String mProtocolVersion;
@@ -42,7 +41,7 @@ public class HttpRequest {
         mRemoteIP = inetAddress.isLoopbackAddress() || inetAddress.isAnyLocalAddress()
                         ? ProxyCacheUtils.LOCAL_PROXY_HOST
                         : inetAddress.getHostAddress();
-        mHeaders = new HashMap<String, String>();
+        mHeaders = new HashMap<>();
         mKeepAlive = true;
     }
 
@@ -56,17 +55,18 @@ public class HttpRequest {
         try {
             read = mInputStream.read(buf, 0, StorageUtils.DEFAULT_BUFFER_SIZE);
         } catch (SSLException e) {
-            ProxyCacheUtils.close(this.mInputStream);
+            ProxyCacheUtils.close(mInputStream);
             throw e;
         } catch (IOException e) {
-            ProxyCacheUtils.close(this.mInputStream);
+            ProxyCacheUtils.close(mInputStream);
             throw new SocketException("Socket Shutdown");
         } catch (Exception e) {
-            ProxyCacheUtils.close(this.mInputStream);
+            e.printStackTrace();
+            ProxyCacheUtils.close(mInputStream);
             throw new VideoCacheException("Other exception");
         }
         if (read == -1) {
-            ProxyCacheUtils.close(this.mInputStream);
+            ProxyCacheUtils.close(mInputStream);
             throw new SocketException("Can't read inputStream");
         }
         while (read > 0) {
@@ -83,7 +83,6 @@ public class HttpRequest {
             mInputStream.skip(splitByteIndex);
         }
 
-        mParams = new HashMap<String, String>();
         mHeaders.clear();
 
         // Create a BufferedReader for parsing the header.
@@ -91,11 +90,11 @@ public class HttpRequest {
 
         // Decode the header into params and header java properties
         Map<String, String> extraInfo = new HashMap<String, String>();
-        decodeHeader(headerReader, extraInfo, this.mHeaders);
+        decodeHeader(headerReader, extraInfo, mHeaders);
 
-        if (null != this.mRemoteIP) {
-            mHeaders.put("remote-addr", this.mRemoteIP);
-            mHeaders.put("http-client-ip", this.mRemoteIP);
+        if (null != mRemoteIP) {
+            mHeaders.put("remote-addr", mRemoteIP);
+            mHeaders.put("http-client-ip", mRemoteIP);
         }
 
         mMethod = Method.lookup(extraInfo.get("method"));
@@ -152,7 +151,8 @@ public class HttpRequest {
             }
 
             String uri = st.nextToken();
-            uri = ProxyCacheUtils.decodeUri(uri);
+            uri = ProxyCacheUtils.decodeUriWithBase64(uri);
+
 
             // If there's another token, its protocol version,
             // followed by HTTP headers.

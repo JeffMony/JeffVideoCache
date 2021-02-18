@@ -4,10 +4,14 @@ import android.content.Context;
 import android.net.Uri;
 import android.view.Surface;
 
+import com.jeffmony.playersdk.common.PlayerSettings;
+
 import java.io.IOException;
 import java.util.Map;
 
 public interface IPlayer {
+
+    void initPlayerSettings(PlayerSettings settings);
 
     void setDataSource(Context context, Uri uri, Map<String, String> headers)
             throws IOException, IllegalArgumentException, SecurityException, IllegalStateException;
@@ -25,6 +29,8 @@ public interface IPlayer {
     void setSpeed(float speed);
 
     long getCurrentPosition();
+
+    long getBufferedPosition();
 
     long getDuration();
 

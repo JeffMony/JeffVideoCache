@@ -4,7 +4,11 @@ import android.content.Context;
 import android.net.Uri;
 import android.view.Surface;
 
+import androidx.annotation.NonNull;
+
 import com.jeffmony.playersdk.IPlayer;
+import com.jeffmony.playersdk.common.PlayerSettings;
+import com.jeffmony.playersdk.control.LocalProxyVideoControl;
 import com.jeffmony.videocache.utils.VideoProxyThreadUtils;
 
 import java.io.IOException;
@@ -18,8 +22,17 @@ public abstract class BasePlayerImpl {
     private IPlayer.OnErrorListener mOnErrorListener;
     private IPlayer.OnCompletionListener mOnCompletionListener;
 
+
+    protected LocalProxyVideoControl mLocalProxyVideoControl;
+    protected PlayerSettings mPlayerSettings;
+
     public BasePlayerImpl(Context context) {
         mContext = context.getApplicationContext();
+        mLocalProxyVideoControl = new LocalProxyVideoControl(this);
+    }
+
+    public void initPlayerSettings(@NonNull PlayerSettings settings) {
+        mPlayerSettings = settings;
     }
 
     public abstract void setDataSource(Context context, Uri uri, Map<String, String> headers)
@@ -38,6 +51,8 @@ public abstract class BasePlayerImpl {
     public abstract void setSpeed(float speed);
 
     public abstract long getCurrentPosition();
+
+    public abstract long getBufferedPosition();
 
     public abstract long getDuration();
 
