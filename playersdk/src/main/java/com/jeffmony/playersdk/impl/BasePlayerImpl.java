@@ -121,6 +121,8 @@ public abstract class BasePlayerImpl {
             }
             if (msg == ProxyMessage.MSG_VIDEO_PROXY_PROGRESS || msg == ProxyMessage.MSG_VIDEO_PROXY_COMPLETED) {
                 mProxyCachePercent = VideoParamsUtils.getFloatValue(params, VideoParams.PERCENT);
+            } else if (msg == ProxyMessage.MSG_VIDEO_PROXY_FORBIDDEN) {
+                mPlayerSettings.setLocalProxyEnable(false);
             }
         });
     }

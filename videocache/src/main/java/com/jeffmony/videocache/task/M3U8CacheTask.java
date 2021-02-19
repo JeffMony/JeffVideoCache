@@ -87,14 +87,18 @@ public class M3U8CacheTask extends VideoCacheTask {
     }
 
     @Override
-    public void seekToCacheTask(long curLength) {
-        //M3U8视频可以不用考虑这个
+    public void seekToCacheTask(float percent) {
+        int seekTsIndex = (int)(percent * mTotalTs);
+        seekToCacheTask(seekTsIndex);
     }
 
-    @Override
-    public void seekToCacheTask(int curTs) {
+    private void seekToCacheTask(int curTs) {
         if (mIsCompleted) {
             notifyOnTaskCompleted();
+            return;
+        }
+        if (mTaskExecutor != null && !mTaskExecutor.isShutdown()) {
+            //已经存在的任务不需要重新创建了
             return;
         }
         mTaskExecutor = new ThreadPoolExecutor(6, 6,

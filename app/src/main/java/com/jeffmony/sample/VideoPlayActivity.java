@@ -70,6 +70,7 @@ public class VideoPlayActivity extends Activity {
         mTimeView = findViewById(R.id.video_time_view);
 
         mVideoView.setSurfaceTextureListener(mTextureListener);
+        mProgressView.setOnSeekBarChangeListener(mOnSeekBarChangeListener);
     }
 
     private TextureView.SurfaceTextureListener mTextureListener = new TextureView.SurfaceTextureListener() {
@@ -113,6 +114,34 @@ public class VideoPlayActivity extends Activity {
         mPlayer.prepareAsync();
 
     }
+
+    private SeekBar.OnSeekBarChangeListener mOnSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener() {
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+
+        }
+
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {
+            mHandler.removeMessages(MSG_UPDATE_VIDEOTIME);
+        }
+
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {
+            long totalDuration = mPlayer.getDuration();
+            if (totalDuration > 0) {
+                int progress = seekBar.getProgress();
+                mPlayer.seekTo((long) (progress * 1.0f / MAX_PROGRESS * totalDuration));
+                if (progress == MAX_PROGRESS) {
+                    mHandler.removeMessages(MSG_UPDATE_VIDEOTIME);
+                } else {
+                    mHandler.sendEmptyMessage(MSG_UPDATE_VIDEOTIME);
+                }
+            } else {
+                mHandler.sendEmptyMessage(MSG_UPDATE_VIDEOTIME);
+            }
+        }
+    };
 
     private IPlayer.OnPreparedListener mOnPreparedListener = new IPlayer.OnPreparedListener() {
         @Override

@@ -47,12 +47,9 @@ public abstract class VideoCacheTask {
 
     public abstract void pauseCacheTask();
 
-    public abstract void seekToCacheTask(int curTs);
-
-    public abstract void seekToCacheTask(long curLength);
+    public abstract void seekToCacheTask(float percent);
 
     public abstract void resumeCacheTask();
-
 
     protected void notifyOnTaskStart() {
         mListener.onTaskStart();

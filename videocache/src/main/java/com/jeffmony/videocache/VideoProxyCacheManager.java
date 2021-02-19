@@ -368,6 +368,18 @@ public class VideoProxyCacheManager {
         }
     }
 
+    /**
+     * 拖动播放进度条之后的操作
+     * @param url
+     * @param percent
+     */
+    public void seekToCacheTask(String url, float percent) {
+        VideoCacheTask cacheTask = mCacheTaskMap.get(url);
+        if (cacheTask != null) {
+            cacheTask.seekToCacheTask(percent);
+        }
+    }
+
     private void notifyLocalProxyLock(Object lock) {
         synchronized (lock) {
             lock.notifyAll();

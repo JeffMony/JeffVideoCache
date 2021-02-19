@@ -36,12 +36,11 @@ public class NonM3U8CacheTask extends VideoCacheTask {
     }
 
     @Override
-    public void seekToCacheTask(int curTs) {
-        //非M3U8视频忽略这个调用
+    public void seekToCacheTask(float percent) {
+
     }
 
-    @Override
-    public void seekToCacheTask(long curLength) {
+    private void seekToCacheTask(long curLength) {
         if (mIsCompleted) {
             notifyOnTaskCompleted();
             return;
