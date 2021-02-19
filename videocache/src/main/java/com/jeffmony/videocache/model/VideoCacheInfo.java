@@ -1,6 +1,7 @@
 package com.jeffmony.videocache.model;
 
 import java.io.Serializable;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -18,6 +19,14 @@ public class VideoCacheInfo implements Serializable {
     private float mPercent;                        //缓存视频的百分比
     private float mSpeed;                          //缓存速度
     private Map<Integer, Long> mTsLengthMap;       //key表示ts的索引，value表示索引分片的content-length
+    private LinkedHashMap<Long, Long> mVideoSegMap;//视频分片的保存结构
+
+    /**
+     * mVideoSegMap
+     * [0, 2], [4,8], [12,20]
+     * 一个整视频中有3小段已经下载好了
+     * 一定要按照顺讯来存储
+     */
 
     public VideoCacheInfo(String url) {
         mVideoUrl = url;
@@ -95,6 +104,14 @@ public class VideoCacheInfo implements Serializable {
 
     public Map<Integer, Long> getTsLengthMap() {
         return mTsLengthMap;
+    }
+
+    public void setVideoSegMap(LinkedHashMap<Long, Long> videoSegMap) {
+        mVideoSegMap = videoSegMap;
+    }
+
+    public LinkedHashMap<Long, Long> getVideoSegMap() {
+        return mVideoSegMap;
     }
 
     @Override

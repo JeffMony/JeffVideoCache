@@ -8,11 +8,13 @@ import com.jeffmony.videocache.socket.response.BaseResponse;
 import com.jeffmony.videocache.socket.response.M3U8Response;
 import com.jeffmony.videocache.socket.response.M3U8TsResponse;
 import com.jeffmony.videocache.socket.response.Mp4Response;
+import com.jeffmony.videocache.utils.HttpUtils;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -58,14 +60,19 @@ public class SocketProcessTask implements Runnable {
 
                     if (TextUtils.equals(ProxyCacheUtils.M3U8, videoTypeInfo)) {
                         response = new M3U8Response(request, videoUrl, headers);
-                        response.sendResponse(mSocket, outputStream);
                     } else if (TextUtils.equals(ProxyCacheUtils.NON_M3U8, videoTypeInfo)) {
                         response = new Mp4Response(request, videoUrl, headers);
-                        response.sendResponse(mSocket, outputStream);
                     } else {
                         //无法从已知的信息判定视频信息，需要重新请求
-
+                        HttpURLConnection connection = HttpUtils.getConnection(videoUrl, headers);
+                        String contentType = connection.getContentType();
+                        if (ProxyCacheUtils.isM3U8Mimetype(contentType)) {
+                            response = new M3U8Response(request, videoUrl, headers);
+                        } else {
+                            response = new Mp4Response(request, videoUrl, headers);
+                        }
                     }
+                    response.sendResponse(mSocket, outputStream);
                 } else if (url.contains(ProxyCacheUtils.TS_PROXY_SPLIT_STR)) {
                     //说明是M3U8 ts格式的文件
                     String[] videoInfoArr = url.split(ProxyCacheUtils.TS_PROXY_SPLIT_STR);
