@@ -25,7 +25,9 @@ public class NonM3U8CacheTask extends VideoCacheTask {
 
     @Override
     public void pauseCacheTask() {
-
+        if (mTaskExecutor != null && !mTaskExecutor.isShutdown()) {
+            mTaskExecutor.shutdownNow();
+        }
     }
 
     @Override

@@ -285,6 +285,7 @@ public class VideoProxyCacheManager {
         VideoCacheTask cacheTask = mCacheTaskMap.get(cacheInfo.getVideoUrl());
         if (cacheTask == null) {
             cacheTask = new M3U8CacheTask(cacheInfo, headers, m3u8);
+            mCacheTaskMap.put(cacheInfo.getVideoUrl(), cacheTask);
         }
         startVideoCacheTask(cacheTask, cacheInfo);
     }
@@ -298,6 +299,7 @@ public class VideoProxyCacheManager {
         VideoCacheTask cacheTask = mCacheTaskMap.get(cacheInfo.getVideoUrl());
         if (cacheTask == null) {
             cacheTask = new NonM3U8CacheTask(cacheInfo, headers);
+            mCacheTaskMap.put(cacheInfo.getVideoUrl(), cacheTask);
         }
         startVideoCacheTask(cacheTask, cacheInfo);
     }
@@ -388,6 +390,11 @@ public class VideoProxyCacheManager {
      */
     public boolean isM3U8LiveType(String md5) {
         return mM3U8LiveMd5Set.contains(md5);
+    }
+
+    public void releaseProxyCacheSet(String md5) {
+        mM3U8LiveMd5Set.remove(md5);
+        mM3U8LocalProxyMd5Set.remove(md5);
     }
 
     public void setPlayingUrlMd5(String md5) {
