@@ -2,6 +2,7 @@ package com.jeffmony.videocache.socket.response;
 
 import android.text.TextUtils;
 
+import com.jeffmony.videocache.VideoProxyCacheManager;
 import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.socket.request.ChunkedOutputStream;
 import com.jeffmony.videocache.socket.request.ContentType;
@@ -91,4 +92,12 @@ public abstract class BaseResponse {
     }
 
     public abstract void sendBody(Socket socket, OutputStream outputStream, long pending) throws Exception;
+
+    protected boolean shouldSendResponse(Socket socket, String md5) {
+        return !socket.isClosed() && TextUtils.equals(md5, VideoProxyCacheManager.getInstance().getPlayingUrlMd5());
+    }
+
+    protected int getDelayTime(int waitTime) {
+        return waitTime > MAX_WAIT_TIME ? MAX_WAIT_TIME : waitTime;
+    }
 }

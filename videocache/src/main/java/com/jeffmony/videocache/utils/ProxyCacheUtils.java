@@ -142,6 +142,44 @@ public class ProxyCacheUtils {
         return headers;
     }
 
+    public static boolean isM3U8(String videoUrl, Map<String, Object> cacheParams) {
+        String videoInfo = getVideoTypeInfo(videoUrl, cacheParams);
+        if (TextUtils.equals(M3U8, videoInfo)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 从proxyUrl中解析出对应的port
+     * 输入: http://127.0.0.1:43435/XXXXX&v5core&XXXXXX
+     * 输出 43435
+     *
+     * @param proxyUrl
+     * @return
+     */
+    public static int getPortFromProxyUrl(String proxyUrl) {
+        if (!proxyUrl.contains(LOCAL_PROXY_URL)) {
+            return 0;
+        }
+        try {
+            proxyUrl = proxyUrl.substring(LOCAL_PROXY_URL.length() + 1);
+        } catch (Exception e) {
+            return 0;
+        }
+        int index = proxyUrl.indexOf("/");
+        if (index == -1) {
+            return 0;
+        }
+        int port;
+        try {
+            port = Integer.parseInt(proxyUrl.substring(0, index));
+            return port;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     public static String getProxyUrl(String videoUrl, Map<String, String> headers, Map<String, Object> cacheParams) {
         String videoInfo = getVideoTypeInfo(videoUrl, cacheParams);
         String headerStr = map2Str(headers);
@@ -153,7 +191,6 @@ public class ProxyCacheUtils {
 
     private static String getVideoTypeInfo(String videoUrl, Map<String, Object> cacheParams) {
         String contentType = VideoParamsUtils.getStringValue(cacheParams, VideoParams.CONTENT_TYPE);
-        LogUtils.i(TAG, "getProxyUrl contentType="+contentType + ", videoUrl="+videoUrl);
         String videoInfo;
         if (!TextUtils.equals(VideoParams.UNKNOWN, contentType)) {
             if (isM3U8Mimetype(contentType)) {
@@ -186,6 +223,13 @@ public class ProxyCacheUtils {
             videoInfo = UNKNOWN;
         }
         return videoInfo;
+    }
+
+    public static boolean isFloatEqual(float f1, float f2) {
+        if (Math.abs(f1 - f2) < 0.0001f) {
+            return true;
+        }
+        return false;
     }
 
 }

@@ -48,6 +48,8 @@ public interface IPlayer {
 
     void setOnCompletionListener(OnCompletionListener listener);
 
+    void setOnProxyCacheInfoListener(OnProxyCacheInfoListener listener);
+
     interface OnCompletionListener {
         void onCompletion();
     }
@@ -65,5 +67,9 @@ public interface IPlayer {
 
     interface OnErrorListener {
         void onError(int what, String msg);
+    }
+
+    interface OnProxyCacheInfoListener {
+        void onProxyCacheInfo(int msg, Map<String, Object> params);
     }
 }

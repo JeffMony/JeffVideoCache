@@ -16,7 +16,7 @@ import java.util.concurrent.Executors;
  * 本地代理服务端类
  */
 
-public class VideoLocalProxyServer {
+public class LocalProxyVideoServer {
 
     private static final String TAG = "LocalProxyCacheServer";
 
@@ -26,7 +26,7 @@ public class VideoLocalProxyServer {
     private Thread mRequestThread;
     private int mPort;
 
-    public VideoLocalProxyServer() {
+    public LocalProxyVideoServer() {
         try {
             InetAddress address = InetAddress.getByName(ProxyCacheUtils.LOCAL_PROXY_HOST);
             mLocalServer = new ServerSocket(0, 8, address);

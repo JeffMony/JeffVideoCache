@@ -4,10 +4,13 @@ import androidx.annotation.NonNull;
 
 import com.jeffmony.playersdk.impl.BasePlayerImpl;
 import com.jeffmony.videocache.VideoProxyCacheManager;
-import com.jeffmony.videocache.common.VideoCacheException;
+import com.jeffmony.videocache.common.ProxyMessage;
+import com.jeffmony.videocache.common.VideoParams;
 import com.jeffmony.videocache.listener.IVideoCacheListener;
 import com.jeffmony.videocache.model.VideoCacheInfo;
+import com.jeffmony.videocache.utils.ProxyCacheUtils;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class LocalProxyVideoControl {
@@ -23,17 +26,28 @@ public class LocalProxyVideoControl {
 
         @Override
         public void onCacheProgress(VideoCacheInfo cacheInfo) {
+            Map<String, Object> params = new HashMap<>();
+            params.put(VideoParams.PERCENT, cacheInfo.getPercent());
+            params.put(VideoParams.CACHE_SIZE, cacheInfo.getCachedSize());
+            mPlayer.notifyOnProxyCacheInfo(ProxyMessage.MSG_VIDEO_PROXY_PROGRESS, params);
+        }
+
+        @Override
+        public void onCacheError(VideoCacheInfo cacheInfo, int errorCode) {
 
         }
 
         @Override
-        public void onCacheError(VideoCacheInfo cacheInfo, VideoCacheException exception) {
+        public void onCacheForbidden(VideoCacheInfo cacheInfo) {
 
         }
 
         @Override
         public void onCacheFinished(VideoCacheInfo cacheInfo) {
-
+            Map<String, Object> params = new HashMap<>();
+            params.put(VideoParams.PERCENT, 100f);
+            params.put(VideoParams.TOTAL_SIZE, cacheInfo.getTotalSize());
+            mPlayer.notifyOnProxyCacheInfo(ProxyMessage.MSG_VIDEO_PROXY_COMPLETED, params);
         }
     };
 
@@ -44,6 +58,7 @@ public class LocalProxyVideoControl {
     public void startRequestVideoInfo(String videoUrl, Map<String, String> headers, Map<String, Object> extraParams) {
         mVideoUrl = videoUrl;
         VideoProxyCacheManager.getInstance().addCacheListener(videoUrl, mListener);
+        VideoProxyCacheManager.getInstance().setPlayingUrlMd5(ProxyCacheUtils.computeMD5(videoUrl));
         VideoProxyCacheManager.getInstance().startRequestVideoInfo(videoUrl, headers, extraParams);
     }
 

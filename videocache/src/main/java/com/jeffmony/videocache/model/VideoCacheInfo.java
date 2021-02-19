@@ -15,6 +15,8 @@ public class VideoCacheInfo implements Serializable {
     private String mSavePath;                      //videocacheinfo存储的目录
     private int mLocalPort;                        //本地代理的端口号，每次可能不一样
     private boolean mIsCompleted;                  //文件是否缓存完
+    private float mPercent;                        //缓存视频的百分比
+    private float mSpeed;                          //缓存速度
     private Map<Integer, Long> mTsLengthMap;       //key表示ts的索引，value表示索引分片的content-length
 
     public VideoCacheInfo(String url) {
@@ -78,6 +80,14 @@ public class VideoCacheInfo implements Serializable {
     public void setIsCompleted(boolean isCompleted) { mIsCompleted = isCompleted; }
 
     public boolean isCompleted() { return mIsCompleted; }
+
+    public void setPercent(float percent) { mPercent = percent; }
+
+    public float getPercent() { return mPercent; }
+
+    public void setSpeed(float speed) { mSpeed = speed; }
+
+    public float getSpeed() { return mSpeed; }
 
     public void setTsLengthMap(Map<Integer, Long> tsLengthMap) {
         mTsLengthMap = tsLengthMap;

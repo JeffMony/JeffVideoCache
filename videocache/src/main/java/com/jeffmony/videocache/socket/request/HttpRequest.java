@@ -61,7 +61,6 @@ public class HttpRequest {
             ProxyCacheUtils.close(mInputStream);
             throw new SocketException("Socket Shutdown");
         } catch (Exception e) {
-            e.printStackTrace();
             ProxyCacheUtils.close(mInputStream);
             throw new VideoCacheException("Other exception");
         }
@@ -151,8 +150,6 @@ public class HttpRequest {
             }
 
             String uri = st.nextToken();
-            uri = ProxyCacheUtils.decodeUriWithBase64(uri);
-
 
             // If there's another token, its protocol version,
             // followed by HTTP headers.

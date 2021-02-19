@@ -52,8 +52,8 @@ public class ExoPlayerImpl extends BasePlayerImpl {
     public void setDataSource(Context context, Uri uri, Map<String, String> headers) throws IllegalArgumentException, SecurityException, IllegalStateException {
         String playUrl;
         if (mPlayerSettings.getLocalProxyEnable()) {
+            mIsM3U8 = ProxyCacheUtils.isM3U8(uri.toString(), null);
             playUrl = ProxyCacheUtils.getProxyUrl(uri.toString(), null, null);
-
             //请求放在客户端,非常便于控制
             mLocalProxyVideoControl.startRequestVideoInfo(uri.toString(), null, null);
         } else {
@@ -104,6 +104,9 @@ public class ExoPlayerImpl extends BasePlayerImpl {
 
     @Override
     public long getBufferedPosition() {
+        if (mPlayerSettings.getLocalProxyEnable()) {
+            return (long) (mProxyCachePercent * mExoPlayer.getDuration() / 100);
+        }
         return mExoPlayer.getBufferedPosition();
     }
 
@@ -121,6 +124,7 @@ public class ExoPlayerImpl extends BasePlayerImpl {
     public void release() {
         mExoPlayer.removeVideoListener(mVideoListener);
         mExoPlayer.removeListener(mEventListener);
+        mLocalProxyVideoControl.releaseLocalProxyResources();
         mExoPlayer.release();
     }
 
@@ -146,6 +150,9 @@ public class ExoPlayerImpl extends BasePlayerImpl {
 
     private MediaSource createMediaSource(Uri uri, String extension) {
         int type = Util.inferContentType(uri, extension);
+        if (mIsM3U8) {
+            type = C.TYPE_HLS;
+        }
         DataSource.Factory dataSourceFactory = buildDataSourceFactory();
         switch (type) {
             case C.TYPE_DASH:

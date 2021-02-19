@@ -16,6 +16,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -27,7 +28,6 @@ public class M3U8CacheTask extends VideoCacheTask {
 
     private static final String TAG = "M3U8CacheTask";
 
-    private M3U8 mM3U8;
     private int mCachedTs;
     private int mTotalTs;
     private Map<Integer, Long> mTsLengthMap;
@@ -35,11 +35,13 @@ public class M3U8CacheTask extends VideoCacheTask {
 
     public M3U8CacheTask(VideoCacheInfo cacheInfo, Map<String, String> headers, M3U8 m3u8) {
         super(cacheInfo, headers);
-        mM3U8 = m3u8;
         mTsList = m3u8.getTsList();
         mTotalTs = cacheInfo.getTotalTs();
         mCachedTs = cacheInfo.getCachedTs();
         mTsLengthMap = cacheInfo.getTsLengthMap();
+        if (mTsLengthMap == null) {
+            mTsLengthMap = new HashMap<>();
+        }
     }
 
     @Override
@@ -49,7 +51,8 @@ public class M3U8CacheTask extends VideoCacheTask {
         }
         notifyOnTaskStart();
         initM3U8TsInfo();
-        seekToCacheTask(mCachedTs);
+        int seekIndex = mCachedTs > 1 && mCachedTs <= mTotalTs ? mCachedTs - 1 : mCachedTs;
+        seekToCacheTask(seekIndex);
     }
 
     private void initM3U8TsInfo() {
@@ -95,7 +98,6 @@ public class M3U8CacheTask extends VideoCacheTask {
         mTaskExecutor = new ThreadPoolExecutor(6, 6,
                 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
                 Executors.defaultThreadFactory(), new ThreadPoolExecutor.DiscardOldestPolicy());
-
         for (int index = curTs; index < mTotalTs; index++) {
             final M3U8Ts ts = mTsList.get(index);
             final int tsIndex = index;
@@ -124,9 +126,8 @@ public class M3U8CacheTask extends VideoCacheTask {
             mTsLengthMap.put(tsIndex, tsFile.length());
             ts.setName(tsName);
             ts.setFileSize(tsFile.length());
-
             //更新进度
-
+            notifyCacheProgress();
         }
     }
 
@@ -201,7 +202,61 @@ public class M3U8CacheTask extends VideoCacheTask {
         }
     }
 
-    private void notifyOnM3U8TaskProgress(float percent, long cachedSize, float speed, Map<Integer, Long> tsLengthMap) {
-        mListener.onM3U8TaskProgress(percent, cachedSize, speed, tsLengthMap);
+    private void notifyCacheProgress() {
+        updateM3U8TsInfo();
+        if (mCachedTs > mTotalTs) {
+            mCachedTs = mTotalTs;
+        }
+        mCacheInfo.setCachedTs(mCachedTs);
+        mCacheInfo.setTsLengthMap(mTsLengthMap);
+        mCacheInfo.setCachedSize(mCachedSize);
+        float percent = mCachedTs * 1.0f * 100 / mTotalTs;
+
+        if (!ProxyCacheUtils.isFloatEqual(percent, mPercent)) {
+            long nowTime = System.currentTimeMillis();
+            if (mCachedSize > mLastCachedSize && nowTime > mLastInvokeTime) {
+                mSpeed = (mCachedSize - mLastCachedSize) * 1000 * 1.0f / (nowTime - mLastInvokeTime);
+            }
+            mListener.onM3U8TaskProgress(percent, mCachedSize, mSpeed, mTsLengthMap);
+            mPercent = percent;
+            mCacheInfo.setPercent(percent);
+            mCacheInfo.setSpeed(mSpeed);
+            mLastInvokeTime = System.currentTimeMillis();
+            mLastCachedSize = mCachedSize;
+            saveVideoInfo();
+        }
+
+        boolean isCompleted = true;
+        for (M3U8Ts ts : mTsList) {
+            File tsFile = new File(mSaveDir, ts.getTsName());
+            if (!tsFile.exists()) {
+                isCompleted = false;
+                break;
+            }
+        }
+        mCacheInfo.setIsCompleted(isCompleted);
+        if (isCompleted) {
+            mCacheInfo.setTotalSize(mCachedSize);
+            mTotalSize = mCachedSize;
+            notifyOnTaskCompleted();
+            saveVideoInfo();
+        }
+    }
+
+    private void updateM3U8TsInfo() {
+        long tempCachedSize = 0;
+        int tempCachedTs = 0;
+        for (int index = 0; index < mTsList.size(); index++) {
+            M3U8Ts ts = mTsList.get(index);
+            File tempTsFile = new File(mSaveDir, ts.getTsName());
+            if (tempTsFile.exists() && tempTsFile.length() > 0) {
+                ts.setFileSize(tempTsFile.length());
+                mTsLengthMap.put(index, tempTsFile.length());
+                tempCachedSize += tempTsFile.length();
+                tempCachedTs++;
+            }
+        }
+        mCachedTs = tempCachedTs;
+        mCachedSize = tempCachedSize;
     }
 }

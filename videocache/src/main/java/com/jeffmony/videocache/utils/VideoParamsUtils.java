@@ -58,4 +58,15 @@ public class VideoParamsUtils {
         }
         return -1L;
     }
+
+    public static float getFloatValue(Map<String, Object> params, String key) {
+        if (params == null || TextUtils.isEmpty(key)) {
+            return 0f;
+        }
+        Object object = params.get(key);
+        if (object instanceof Float) {
+            return (Float) object;
+        }
+        return 0f;
+    }
 }

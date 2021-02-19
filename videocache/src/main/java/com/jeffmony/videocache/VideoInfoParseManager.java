@@ -7,6 +7,7 @@ import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.common.VideoType;
 import com.jeffmony.videocache.common.VideoParams;
 import com.jeffmony.videocache.listener.IVideoInfoParsedListener;
+import com.jeffmony.videocache.listener.VideoInfoParsedListener;
 import com.jeffmony.videocache.m3u8.M3U8;
 import com.jeffmony.videocache.m3u8.M3U8Utils;
 import com.jeffmony.videocache.model.VideoCacheInfo;
@@ -56,12 +57,7 @@ public class VideoInfoParseManager {
         mContentType = VideoParamsUtils.getStringValue(extraParams, VideoParams.CONTENT_TYPE);
         mContentLength = VideoParamsUtils.getLongValue(extraParams, VideoParams.CONTENT_LENGTH);
 
-        VideoProxyThreadUtils.submitRunnableTask(new Runnable() {
-            @Override
-            public void run() {
-                parseVideoInfo(cacheInfo);
-            }
-        });
+        VideoProxyThreadUtils.submitRunnableTask(() -> parseVideoInfo(cacheInfo));
     }
 
     private void parseVideoInfo(VideoCacheInfo cacheInfo) {
@@ -118,7 +114,7 @@ public class VideoInfoParseManager {
      * @param cacheInfo
      */
     private void parseNetworkM3U8Info(VideoCacheInfo cacheInfo) {
-        cacheInfo.setVideoType(VideoType.HLS_TYPE);
+
         try {
             M3U8 m3u8 = M3U8Utils.parseNetworkM3U8Info(cacheInfo.getVideoUrl(), mHeaders);
 
@@ -126,17 +122,15 @@ public class VideoInfoParseManager {
                 //说明M3U8是直播
                 mListener.onM3U8LiveCallback(cacheInfo);
             } else {
+                cacheInfo.setVideoType(VideoType.M3U8_TYPE);
                 cacheInfo.setTotalTs(m3u8.getTsCount());
                 // 1.将M3U8结构保存到本地
-                VideoProxyThreadUtils.submitRunnableTask(new Runnable() {
-                    @Override
-                    public void run() {
-                        File localM3U8File = new File(cacheInfo.getSavePath(), cacheInfo.getMd5() + StorageUtils.LOCAL_M3U8_SUFFIX);
-                        try {
-                            M3U8Utils.createLocalM3U8File(localM3U8File, m3u8);
-                        } catch (Exception e) {
-                            LogUtils.w(TAG, "parseM3U8Info->createLocalM3U8File failed, exception=" + e);
-                        }
+                VideoProxyThreadUtils.submitRunnableTask(() -> {
+                    File localM3U8File = new File(cacheInfo.getSavePath(), cacheInfo.getMd5() + StorageUtils.LOCAL_M3U8_SUFFIX);
+                    try {
+                        M3U8Utils.createLocalM3U8File(localM3U8File, m3u8);
+                    } catch (Exception e) {
+                        LogUtils.w(TAG, "parseM3U8Info->createLocalM3U8File failed, exception=" + e);
                     }
                 });
 
@@ -155,6 +149,31 @@ public class VideoInfoParseManager {
             }
         } catch (Exception e) {
             mListener.onM3U8ParsedFailed(new VideoCacheException("parseM3U8Info failed, " + e.getMessage()), cacheInfo);
+        }
+    }
+
+    public void parseProxyM3U8Info(VideoCacheInfo cacheInfo, Map<String, String> headers, VideoInfoParsedListener listener) {
+        mHeaders = headers;
+        mListener = listener;
+        File proxyM3U8File = new File(cacheInfo.getSavePath(), cacheInfo.getMd5() + StorageUtils.PROXY_M3U8_SUFFIX);
+        if (!proxyM3U8File.exists()) {
+            parseNetworkM3U8Info(cacheInfo);
+        } else {
+            VideoProxyThreadUtils.submitRunnableTask(() -> {
+                boolean result = M3U8Utils.updateM3U8TsPortInfo(proxyM3U8File, ProxyCacheUtils.getLocalPort());
+                if (result) {
+                    File localM3U8File = new File(cacheInfo.getSavePath(), cacheInfo.getMd5() + StorageUtils.LOCAL_M3U8_SUFFIX);
+                    try {
+                        M3U8 m3u8 = M3U8Utils.parseLocalM3U8Info(localM3U8File, cacheInfo.getVideoUrl());
+                        cacheInfo.setTotalTs(m3u8.getTsCount());
+                        mListener.onM3U8ParsedFinished(m3u8, cacheInfo);
+                    } catch (Exception e) {
+                        mListener.onM3U8ParsedFailed(new VideoCacheException("parseLocalM3U8Info failed"), cacheInfo);
+                    }
+                } else {
+                    mListener.onM3U8ParsedFailed(new VideoCacheException("updateM3U8TsPortInfo failed"), cacheInfo);
+                }
+            });
         }
     }
 

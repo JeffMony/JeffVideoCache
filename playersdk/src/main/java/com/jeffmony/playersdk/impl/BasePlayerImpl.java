@@ -9,6 +9,9 @@ import androidx.annotation.NonNull;
 import com.jeffmony.playersdk.IPlayer;
 import com.jeffmony.playersdk.common.PlayerSettings;
 import com.jeffmony.playersdk.control.LocalProxyVideoControl;
+import com.jeffmony.videocache.common.ProxyMessage;
+import com.jeffmony.videocache.common.VideoParams;
+import com.jeffmony.videocache.utils.VideoParamsUtils;
 import com.jeffmony.videocache.utils.VideoProxyThreadUtils;
 
 import java.io.IOException;
@@ -21,10 +24,12 @@ public abstract class BasePlayerImpl {
     private IPlayer.OnVideoSizeChangedListener mOnVideoSizeChangedListener;
     private IPlayer.OnErrorListener mOnErrorListener;
     private IPlayer.OnCompletionListener mOnCompletionListener;
-
+    private IPlayer.OnProxyCacheInfoListener mOnProxyCacheInfoListener;
 
     protected LocalProxyVideoControl mLocalProxyVideoControl;
     protected PlayerSettings mPlayerSettings;
+    protected boolean mIsM3U8 = false;
+    protected float mProxyCachePercent = 0f;
 
     public BasePlayerImpl(Context context) {
         mContext = context.getApplicationContext();
@@ -78,13 +83,14 @@ public abstract class BasePlayerImpl {
         mOnCompletionListener = listener;
     }
 
+    public void setOnProxyCacheInfoListener(IPlayer.OnProxyCacheInfoListener listener) {
+        mOnProxyCacheInfoListener = listener;
+    }
+
     protected void notifyOnPrepared() {
-        VideoProxyThreadUtils.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (mOnPreparedListener != null) {
-                    mOnPreparedListener.onPrepared();
-                }
+        VideoProxyThreadUtils.runOnUiThread(() -> {
+            if (mOnPreparedListener != null) {
+                mOnPreparedListener.onPrepared();
             }
         });
     }
@@ -93,23 +99,28 @@ public abstract class BasePlayerImpl {
                                             int rotationDegree,
                                             float pixelRatio,
                                             float darRatio) {
-        VideoProxyThreadUtils.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (mOnVideoSizeChangedListener != null) {
-                    mOnVideoSizeChangedListener.onVideoSizeChanged(width, height, rotationDegree, pixelRatio, darRatio);
-                }
+        VideoProxyThreadUtils.runOnUiThread(() -> {
+            if (mOnVideoSizeChangedListener != null) {
+                mOnVideoSizeChangedListener.onVideoSizeChanged(width, height, rotationDegree, pixelRatio, darRatio);
             }
         });
     }
 
     protected void notifyOnError(int what, String msg) {
-        VideoProxyThreadUtils.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (mOnErrorListener != null) {
-                    mOnErrorListener.onError(what, msg);
-                }
+        VideoProxyThreadUtils.runOnUiThread(() -> {
+            if (mOnErrorListener != null) {
+                mOnErrorListener.onError(what, msg);
+            }
+        });
+    }
+
+    public void notifyOnProxyCacheInfo(int msg, Map<String, Object> params) {
+        VideoProxyThreadUtils.runOnUiThread(() -> {
+            if (mOnProxyCacheInfoListener != null) {
+                mOnProxyCacheInfoListener.onProxyCacheInfo(msg, params);
+            }
+            if (msg == ProxyMessage.MSG_VIDEO_PROXY_PROGRESS || msg == ProxyMessage.MSG_VIDEO_PROXY_COMPLETED) {
+                mProxyCachePercent = VideoParamsUtils.getFloatValue(params, VideoParams.PERCENT);
             }
         });
     }

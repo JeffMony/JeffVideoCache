@@ -14,4 +14,10 @@ public class VideoParams {
 
     public static final int RETRY_COUNT = 2;
 
+    public static final String URL = "url";
+    public static final String PERCENT = "percent";
+    public static final String SPEED = "speed";
+    public static final String CACHE_SIZE = "cache_size";
+    public static final String TOTAL_SIZE = "total_size";
+
 }

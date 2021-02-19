@@ -3,6 +3,7 @@ package com.jeffmony.videocache.m3u8;
 
 import android.text.TextUtils;
 
+import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.utils.HttpUtils;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
@@ -11,6 +12,7 @@ import com.jeffmony.videocache.utils.UrlUtils;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -29,6 +31,8 @@ import java.util.regex.Pattern;
 public class M3U8Utils {
 
     private static final String TAG = "M3U8Utils";
+
+    private static int sOldPort = 0;
 
     /**
      * 根据url将M3U8信息解析出来
@@ -162,6 +166,123 @@ public class M3U8Utils {
         }
     }
 
+    public static M3U8 parseLocalM3U8Info(File localM3U8File, String videoUrl) throws Exception {
+        if (!localM3U8File.exists()) {
+            throw new VideoCacheException("Local M3U8 File not found");
+        }
+        InputStreamReader inputStreamReader = null;
+        BufferedReader bufferedReader = null;
+        try {
+            inputStreamReader = new InputStreamReader(new FileInputStream(localM3U8File));
+            bufferedReader = new BufferedReader(inputStreamReader);
+            M3U8 m3u8 = new M3U8(videoUrl);
+            int targetDuration = 0;
+            int version = 0;
+            int sequence = 0;
+            boolean hasDiscontinuity = false;
+            boolean hasEndList = false;
+            boolean hasKey = false;
+            String method = null;
+            String keyIv = null;
+            String keyUrl = null;
+            float tsDuration = 0;
+            int tsIndex = 0;
+
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                line = line.trim();
+                if (TextUtils.isEmpty(line)) {
+                    continue;
+                }
+                if (line.startsWith(Constants.TAG_PREFIX)) {
+                    if (line.startsWith(Constants.TAG_MEDIA_DURATION)) {
+                        String ret = parseStringAttr(line, Constants.REGEX_MEDIA_DURATION);
+                        if (!TextUtils.isEmpty(ret)) {
+                            tsDuration = Float.parseFloat(ret);
+                        }
+                    } else if (line.startsWith(Constants.TAG_TARGET_DURATION)) {
+                        String ret = parseStringAttr(line, Constants.REGEX_TARGET_DURATION);
+                        if (!TextUtils.isEmpty(ret)) {
+                            targetDuration = Integer.parseInt(ret);
+                        }
+                    } else if (line.startsWith(Constants.TAG_VERSION)) {
+                        String ret = parseStringAttr(line, Constants.REGEX_VERSION);
+                        if (!TextUtils.isEmpty(ret)) {
+                            version = Integer.parseInt(ret);
+                        }
+                    } else if (line.startsWith(Constants.TAG_MEDIA_SEQUENCE)) {
+                        String ret = parseStringAttr(line, Constants.REGEX_MEDIA_SEQUENCE);
+                        if (!TextUtils.isEmpty(ret)) {
+                            sequence = Integer.parseInt(ret);
+                        }
+                    } else if (line.startsWith(Constants.TAG_DISCONTINUITY)) {
+                        hasDiscontinuity = true;
+                    } else if (line.startsWith(Constants.TAG_ENDLIST)) {
+                        hasEndList = true;
+                    } else if (line.startsWith(Constants.TAG_KEY)) {
+                        hasKey = true;
+                        method = parseOptionalStringAttr(line, Constants.REGEX_METHOD);
+                        String keyFormat = parseOptionalStringAttr(line, Constants.REGEX_KEYFORMAT);
+                        if (!Constants.METHOD_NONE.equals(method)) {
+                            keyIv = parseOptionalStringAttr(line, Constants.REGEX_IV);
+                            if (Constants.KEYFORMAT_IDENTITY.equals(keyFormat) || keyFormat == null) {
+                                if (Constants.METHOD_AES_128.equals(method)) {
+                                    // The segment is fully encrypted using an identity key.
+                                    String tempKeyUri = parseStringAttr(line, Constants.REGEX_URI);
+                                    if (tempKeyUri != null) {
+                                        keyUrl = UrlUtils.getM3U8MasterUrl(videoUrl, tempKeyUri);
+                                    }
+                                } else {
+                                    // Do nothing. Samples are encrypted using an identity key,
+                                    // but this is not supported. Hopefully, a traditional DRM
+                                    // alternative is also provided.
+                                }
+                            } else {
+                                // Do nothing.
+                            }
+                        }
+                    }
+                    continue;
+                }
+
+                if (Math.abs(tsDuration - 0.0f) < 0.0001f) {
+                    continue;
+                }
+
+                M3U8Ts ts = new M3U8Ts();
+                String tempUrl = UrlUtils.getM3U8MasterUrl(videoUrl, line);
+                ts.setUrl(tempUrl);
+                ts.setTsIndex(tsIndex);
+                ts.setDuration(tsDuration);
+                ts.setHasDiscontinuity(hasDiscontinuity);
+                ts.setHasKey(hasKey);
+                if (hasKey) {
+                    ts.setMethod(method);
+                    ts.setKeyIv(keyIv);
+                    ts.setKeyUrl(keyUrl);
+                }
+                m3u8.addTs(ts);
+                tsIndex++;
+                tsDuration = 0;
+                hasDiscontinuity = false;
+                hasKey = false;
+                method = null;
+                keyUrl = null;
+                keyIv = null;
+            }
+
+            m3u8.setTargetDuration(targetDuration);
+            m3u8.setVersion(version);
+            m3u8.setSequence(sequence);
+            m3u8.setIsLive(!hasEndList);
+            return m3u8;
+        } catch (Exception e) {
+            throw e;
+        } finally {
+            ProxyCacheUtils.close(inputStreamReader);
+            ProxyCacheUtils.close(bufferedReader);
+        }
+    }
 
     public static String parseStringAttr(String line, Pattern pattern) {
         if (pattern == null)
@@ -259,11 +380,90 @@ public class M3U8Utils {
                 bfw.write(Constants.TAG_DISCONTINUITY + "\n");
             }
             bfw.write(Constants.TAG_MEDIA_DURATION + ":" + m3u8Ts.getDuration() + ",\n");
-            bfw.write(m3u8Ts.getTsProxyUrl(md5, headers));
+            bfw.write(m3u8Ts.getTsProxyUrl(md5, headers) + "\n");
         }
         bfw.write(Constants.TAG_ENDLIST);
         bfw.flush();
         bfw.close();
+    }
+
+    /**
+     * 更新M3U8 索引文件中的端口号
+     * @param proxyM3U8File
+     * @param proxyPort
+     * @return
+     */
+    public static boolean updateM3U8TsPortInfo(File proxyM3U8File, int proxyPort) {
+        File tempM3U8File = null;
+        if (proxyM3U8File.exists()) {
+            File parentFile = proxyM3U8File.getParentFile();
+            tempM3U8File = new File(parentFile, "temp_video.m3u8");
+        }
+        if (tempM3U8File != null) {
+            BufferedWriter bfw = null;
+            try {
+                bfw = new BufferedWriter(new FileWriter(tempM3U8File, false));
+            } catch (Exception e) {
+                LogUtils.w(TAG, "Create buffered writer file failed, exception="+e);
+                ProxyCacheUtils.close(bfw);
+                return false;
+            }
+
+            InputStreamReader inputStreamReader = null;
+            try {
+                inputStreamReader = new InputStreamReader(new FileInputStream(proxyM3U8File));
+            } catch (Exception e) {
+                LogUtils.w(TAG, "Create stream reader failed, exception="+e);
+                ProxyCacheUtils.close(inputStreamReader);
+                return false;
+            }
+
+            BufferedReader bufferedReader;
+
+            if (inputStreamReader != null && bfw != null) {
+                bufferedReader = new BufferedReader(inputStreamReader);
+                String line;
+                try {
+                    while((line = bufferedReader.readLine()) != null) {
+                        if (line.startsWith(ProxyCacheUtils.LOCAL_PROXY_URL)) {
+                            if (sOldPort == 0) {
+                                sOldPort = ProxyCacheUtils.getPortFromProxyUrl(line);
+                                if (sOldPort == 0) {
+                                    return false;
+                                } else if (sOldPort == proxyPort) {
+                                    return true;
+                                }
+                            }
+                            line = line.replace(":" + sOldPort, ":" + proxyPort);
+                            bfw.write(line + "\n");
+                        } else {
+                            bfw.write(line + "\n");
+                        }
+                    }
+                } catch (Exception e) {
+                    LogUtils.w(TAG, "Read proxy m3u8 file failed, exception="+e);
+                    return false;
+                } finally {
+                    ProxyCacheUtils.close(bfw);
+                    ProxyCacheUtils.close(inputStreamReader);
+                    ProxyCacheUtils.close(bufferedReader);
+                }
+            } else {
+                ProxyCacheUtils.close(bfw);
+                ProxyCacheUtils.close(inputStreamReader);
+                return false;
+            }
+
+            if (proxyM3U8File.exists() && tempM3U8File.exists()) {
+                proxyM3U8File.delete();
+                tempM3U8File.renameTo(proxyM3U8File);
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
     }
 
 }

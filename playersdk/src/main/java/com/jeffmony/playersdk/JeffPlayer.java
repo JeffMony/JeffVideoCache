@@ -118,4 +118,9 @@ public class JeffPlayer implements IPlayer {
     public void setOnCompletionListener(OnCompletionListener listener) {
         mPlayerImpl.setOnCompletionListener(listener);
     }
+
+    @Override
+    public void setOnProxyCacheInfoListener(OnProxyCacheInfoListener listener) {
+        mPlayerImpl.setOnProxyCacheInfoListener(listener);
+    }
 }

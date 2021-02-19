@@ -21,6 +21,9 @@ public abstract class VideoCacheTask {
     protected long mCachedSize;      //当前缓存大小
     protected long mLastCachedSize;  //上一次缓存大小
     protected long mTotalSize;
+    protected long mLastInvokeTime;
+    protected float mPercent = 0.0f;
+    protected float mSpeed = 0.0f;
     protected boolean mIsCompleted;
     protected File mSaveDir;
 
@@ -60,7 +63,7 @@ public abstract class VideoCacheTask {
     }
 
     protected void notifyOnTaskCompleted() {
-        mListener.onTaskCompleted();
+        mListener.onTaskCompleted(mTotalSize);
     }
 
     protected boolean isTaskRunning() {
@@ -68,11 +71,6 @@ public abstract class VideoCacheTask {
     }
 
     protected void saveVideoInfo() {
-        VideoProxyThreadUtils.submitRunnableTask(new Runnable() {
-            @Override
-            public void run() {
-                StorageUtils.saveVideoCacheInfo(mCacheInfo, mSaveDir);
-            }
-        });
+        VideoProxyThreadUtils.submitRunnableTask(() -> StorageUtils.saveVideoCacheInfo(mCacheInfo, mSaveDir));
     }
 }

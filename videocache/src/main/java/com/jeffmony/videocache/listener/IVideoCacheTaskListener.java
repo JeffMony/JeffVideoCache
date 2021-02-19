@@ -11,6 +11,6 @@ public interface IVideoCacheTaskListener {
 
     void onTaskFailed(Exception e);
 
-    void onTaskCompleted();
+    void onTaskCompleted(long totalSize);
 
 }

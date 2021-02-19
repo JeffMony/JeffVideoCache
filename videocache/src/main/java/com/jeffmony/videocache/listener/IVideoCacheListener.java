@@ -1,6 +1,5 @@
 package com.jeffmony.videocache.listener;
 
-import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.model.VideoCacheInfo;
 
 public interface IVideoCacheListener {
@@ -9,7 +8,9 @@ public interface IVideoCacheListener {
 
     void onCacheProgress(VideoCacheInfo cacheInfo);
 
-    void onCacheError(VideoCacheInfo cacheInfo, VideoCacheException exception);
+    void onCacheError(VideoCacheInfo cacheInfo, int errorCode);
+
+    void onCacheForbidden(VideoCacheInfo cacheInfo);
 
     void onCacheFinished(VideoCacheInfo cacheInfo);
 }
