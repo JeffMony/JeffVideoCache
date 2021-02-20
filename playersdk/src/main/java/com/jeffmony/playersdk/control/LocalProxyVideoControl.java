@@ -71,7 +71,7 @@ public class LocalProxyVideoControl {
     }
 
     public void releaseLocalProxyResources() {
-        VideoProxyCacheManager.getInstance().pauseCacheTask(mVideoUrl);   //暂停视频缓存任务
+        VideoProxyCacheManager.getInstance().stopCacheTask(mVideoUrl);   //停止视频缓存任务
         VideoProxyCacheManager.getInstance().removeCacheListener(mVideoUrl);
         VideoProxyCacheManager.getInstance().releaseProxyCacheSet(ProxyCacheUtils.computeMD5(mVideoUrl));
     }

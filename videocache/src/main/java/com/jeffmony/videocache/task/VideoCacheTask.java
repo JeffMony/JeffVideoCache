@@ -49,6 +49,8 @@ public abstract class VideoCacheTask {
 
     public abstract void pauseCacheTask();
 
+    public abstract void stopCacheTask();
+
     public abstract void seekToCacheTask(float percent);
 
     public abstract void resumeCacheTask();

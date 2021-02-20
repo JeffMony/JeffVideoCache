@@ -82,6 +82,11 @@ public class M3U8CacheTask extends VideoCacheTask {
     }
 
     @Override
+    public void stopCacheTask() {
+        pauseCacheTask();
+    }
+
+    @Override
     public void resumeCacheTask() {
 
     }

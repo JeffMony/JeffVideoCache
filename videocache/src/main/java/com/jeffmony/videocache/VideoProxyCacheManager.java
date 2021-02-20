@@ -362,6 +362,14 @@ public class VideoProxyCacheManager {
         }
     }
 
+    public void stopCacheTask(String url) {
+        VideoCacheTask cacheTask = mCacheTaskMap.get(url);
+        if (cacheTask != null) {
+            cacheTask.stopCacheTask();
+            mCacheTaskMap.remove(url);
+        }
+    }
+
     /**
      * 恢复缓存任务
      * @param url

@@ -142,6 +142,15 @@ public class NonM3U8CacheTask extends VideoCacheTask {
     }
 
     @Override
+    public void stopCacheTask() {
+        pauseCacheTask();
+        long tempRangeStart = mRequestRange.getStart();
+        long tempRangeEnd = mCachedSize;
+        mRequestRange = new VideoRange(tempRangeStart, tempRangeEnd);
+        updateVideoRangeInfo();
+    }
+
+    @Override
     public void resumeCacheTask() {
 
     }
@@ -156,7 +165,7 @@ public class NonM3U8CacheTask extends VideoCacheTask {
             notifyOnTaskCompleted();
             return;
         }
-        mTaskExecutor = new ThreadPoolExecutor(6, 6,
+        mTaskExecutor = new ThreadPoolExecutor(1, 1,
                 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
                 Executors.defaultThreadFactory(), new ThreadPoolExecutor.DiscardOldestPolicy());
 
