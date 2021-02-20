@@ -93,7 +93,7 @@ public class M3U8CacheTask extends VideoCacheTask {
     }
 
     private void seekToCacheTask(int curTs) {
-        if (mIsCompleted) {
+        if (mCacheInfo.isCompleted()) {
             notifyOnTaskCompleted();
             return;
         }
@@ -227,7 +227,7 @@ public class M3U8CacheTask extends VideoCacheTask {
             mPercent = percent;
             mCacheInfo.setPercent(percent);
             mCacheInfo.setSpeed(mSpeed);
-            mLastInvokeTime = System.currentTimeMillis();
+            mLastInvokeTime = nowTime;
             mLastCachedSize = mCachedSize;
             saveVideoInfo();
         }

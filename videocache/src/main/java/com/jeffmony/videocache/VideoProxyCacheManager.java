@@ -305,6 +305,7 @@ public class VideoProxyCacheManager {
     }
 
     private void startVideoCacheTask(VideoCacheTask cacheTask, VideoCacheInfo cacheInfo) {
+        final Object lock = VideoLockManager.getInstance().getLock(cacheInfo.getMd5());
         cacheTask.setTaskListener(new IVideoCacheTaskListener() {
             @Override
             public void onTaskStart() {
@@ -313,6 +314,7 @@ public class VideoProxyCacheManager {
 
             @Override
             public void onTaskProgress(float percent, long cachedSize, float speed) {
+                notifyLocalProxyLock(lock);
                 cacheInfo.setPercent(percent);
                 cacheInfo.setCachedSize(cachedSize);
                 cacheInfo.setSpeed(speed);
@@ -322,6 +324,7 @@ public class VideoProxyCacheManager {
 
             @Override
             public void onM3U8TaskProgress(float percent, long cachedSize, float speed, Map<Integer, Long> tsLengthMap) {
+                notifyLocalProxyLock(lock);
                 cacheInfo.setPercent(percent);
                 cacheInfo.setCachedSize(cachedSize);
                 cacheInfo.setSpeed(speed);
@@ -332,11 +335,13 @@ public class VideoProxyCacheManager {
 
             @Override
             public void onTaskFailed(Exception e) {
+                notifyLocalProxyLock(lock);
                 mProxyHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_ERROR, cacheInfo).sendToTarget();
             }
 
             @Override
             public void onTaskCompleted(long totalSize) {
+                notifyLocalProxyLock(lock);
                 cacheInfo.setTotalSize(totalSize);
                 mCacheInfoMap.put(cacheInfo.getVideoUrl(), cacheInfo);
                 mProxyHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_COMPLETED, cacheInfo).sendToTarget();

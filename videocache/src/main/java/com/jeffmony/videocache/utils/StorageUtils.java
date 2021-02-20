@@ -25,6 +25,7 @@ public class StorageUtils {
     public static final String PROXY_M3U8_SUFFIX = "_proxy.m3u8";
     public static final String TS_SUFFIX = ".ts";
     public static final String M3U8_SUFFIX = ".m3u8";
+    public static final String NON_M3U8_SUFFIX = ".video";
 
     private static final Object sInfoFileLock = new Object();
 

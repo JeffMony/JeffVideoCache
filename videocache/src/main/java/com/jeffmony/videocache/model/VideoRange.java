@@ -32,4 +32,8 @@ public class VideoRange {
     public int hashCode() {
         return Objects.hash(mStart, mEnd);
     }
+
+    public String toString() {
+        return "VideoRange[start="+mStart+", end="+mEnd+"]";
+    }
 }

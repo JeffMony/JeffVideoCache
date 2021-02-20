@@ -8,6 +8,7 @@ import com.jeffmony.videocache.utils.StorageUtils;
 import com.jeffmony.videocache.utils.VideoProxyThreadUtils;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -24,15 +25,16 @@ public abstract class VideoCacheTask {
     protected long mLastInvokeTime;
     protected float mPercent = 0.0f;
     protected float mSpeed = 0.0f;
-    protected boolean mIsCompleted;
     protected File mSaveDir;
 
     public VideoCacheTask(VideoCacheInfo cacheInfo, Map<String, String> headers) {
         mCacheInfo = cacheInfo;
         mHeaders = headers;
+        if (mHeaders == null) {
+            mHeaders = new HashMap<>();
+        }
         mCachedSize = cacheInfo.getCachedSize();
         mTotalSize = cacheInfo.getTotalSize();
-        mIsCompleted = cacheInfo.isCompleted();
         mSaveDir = new File(cacheInfo.getSavePath());
         if (!mSaveDir.exists()) {
             mSaveDir.mkdir();

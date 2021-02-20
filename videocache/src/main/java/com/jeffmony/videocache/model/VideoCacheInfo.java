@@ -25,7 +25,7 @@ public class VideoCacheInfo implements Serializable {
      * mVideoSegMap
      * [0, 2], [4,8], [12,20]
      * 一个整视频中有3小段已经下载好了
-     * 一定要按照顺讯来存储
+     * 一定要按照顺序来存储
      */
 
     public VideoCacheInfo(String url) {

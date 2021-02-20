@@ -198,8 +198,12 @@ public class VideoInfoParseManager {
         String length = connection.getHeaderField("content-length");
         try {
             long totalLength = Long.parseLong(length);
-            cacheInfo.setTotalSize(totalLength);
-            mListener.onNonM3U8ParsedFinished(cacheInfo);
+            if (totalLength > 0) {
+                cacheInfo.setTotalSize(totalLength);
+                mListener.onNonM3U8ParsedFinished(cacheInfo);
+            } else {
+                mListener.onNonM3U8ParsedFailed(new VideoCacheException("Total length is illegal"), cacheInfo);
+            }
         } catch (Exception e) {
             mListener.onNonM3U8ParsedFailed(new VideoCacheException(e.getMessage()), cacheInfo);
         }

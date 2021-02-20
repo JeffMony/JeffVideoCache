@@ -226,7 +226,7 @@ public class ProxyCacheUtils {
     }
 
     public static boolean isFloatEqual(float f1, float f2) {
-        if (Math.abs(f1 - f2) < 0.0001f) {
+        if (Math.abs(f1 - f2) < 0.1f) {
             return true;
         }
         return false;
