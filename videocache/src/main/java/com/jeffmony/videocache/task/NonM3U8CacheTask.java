@@ -183,7 +183,7 @@ public class NonM3U8CacheTask extends VideoCacheTask {
                 randomAccessFile = new RandomAccessFile(videoFile.getAbsolutePath(), "rw");
                 randomAccessFile.seek(requestStart);
 
-                LogUtils.i(TAG, "Start request");
+                LogUtils.i(TAG, "Start request : " + mRequestRange);
                 connection = HttpUtils.getConnection(mVideoUrl, mHeaders);
                 inputStream = connection.getInputStream();
                 LogUtils.i(TAG, "Receive response");
@@ -254,9 +254,7 @@ public class NonM3U8CacheTask extends VideoCacheTask {
     }
 
     private void updateVideoRangeInfo() {
-        if (mVideoRangeMap.size() == 0) {
-            mVideoRangeMap.put(mRequestRange.getStart(), mRequestRange);
-        } else {
+        if (mVideoRangeMap.size() > 0) {
             long finalStart = -1;
             long finalEnd = -1;
 
@@ -294,7 +292,7 @@ public class NonM3U8CacheTask extends VideoCacheTask {
             }
 
             VideoRange finalVideoRange = new VideoRange(finalStart, finalEnd);
-            LogUtils.i(TAG, "finalVideoRange: " + finalVideoRange);
+            LogUtils.i(TAG, "updateVideoRangeInfo--->finalVideoRange: " + finalVideoRange);
 
             LinkedHashMap<Long, VideoRange> tempVideoRangeMap = new LinkedHashMap<>();
             for(Map.Entry<Long, VideoRange> entry : mVideoRangeMap.entrySet()) {
@@ -309,23 +307,28 @@ public class NonM3U8CacheTask extends VideoCacheTask {
                     tempVideoRangeMap.put(finalVideoRange.getStart(), finalVideoRange);
                 }
             }
-
             mVideoRangeMap.clear();
             mVideoRangeMap.putAll(tempVideoRangeMap);
-
-            LinkedHashMap<Long, Long> tempSegMap = new LinkedHashMap<>();
-            for(Map.Entry<Long, VideoRange> entry : mVideoRangeMap.entrySet()) {
-                VideoRange videoRange = entry.getValue();
-                LogUtils.i(TAG, "Result videoRange : " + videoRange);
-                tempSegMap.put(videoRange.getStart(), videoRange.getEnd());
-            }
-            mVideoSegMap.clear();
-            mVideoSegMap.putAll(tempSegMap);
-            mCacheInfo.setVideoSegMap(mVideoSegMap);
+        } else {
+            LogUtils.i(TAG, "updateVideoRangeInfo--->mRequestRange : " + mRequestRange);
+            mVideoRangeMap.put(mRequestRange.getStart(), mRequestRange);
         }
+
+        LinkedHashMap<Long, Long> tempSegMap = new LinkedHashMap<>();
+        for(Map.Entry<Long, VideoRange> entry : mVideoRangeMap.entrySet()) {
+            VideoRange videoRange = entry.getValue();
+            LogUtils.i(TAG, "updateVideoRangeInfo--->Result videoRange : " + videoRange);
+            tempSegMap.put(videoRange.getStart(), videoRange.getEnd());
+        }
+        mVideoSegMap.clear();
+        mVideoSegMap.putAll(tempSegMap);
+        mCacheInfo.setVideoSegMap(mVideoSegMap);
+
         if (mVideoRangeMap.size() == 1) {
-            VideoRange videoRange = mVideoRangeMap.get(0);
-            if (videoRange != null && videoRange.getStart() == 0L && videoRange.getEnd() == mTotalSize) {
+            VideoRange videoRange = mVideoRangeMap.get(0L);
+            LogUtils.i(TAG, "updateVideoRangeInfo---> videoRange : " + videoRange);
+            if (videoRange != null && videoRange.equals(new VideoRange(0, mTotalSize))) {
+                LogUtils.i(TAG, "updateVideoRangeInfo--->Set completed");
                 mCacheInfo.setIsCompleted(true);
             }
         }

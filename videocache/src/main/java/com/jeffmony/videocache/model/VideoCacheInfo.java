@@ -131,6 +131,7 @@ public class VideoCacheInfo implements Serializable {
         return "VideoCacheInfo[" +
                 "url=" + mVideoUrl + "," +
                 "type=" + mVideoType + "," +
+                "isCompleted=" + mIsCompleted + "," +
                 "cachedSize=" + mCachedSize + "," +
                 "totalSize=" + mTotalSize  + "," +
                 "cachedTs=" + mCachedTs + "," +
