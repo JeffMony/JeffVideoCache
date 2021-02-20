@@ -430,8 +430,8 @@ public class VideoProxyCacheManager {
         if (!tsFile.exists() || tsFile.length() == 0) {
             return false;
         }
-        for(Map.Entry item : mCacheInfoMap.entrySet()) {
-            String url = String.valueOf(item.getKey());
+        for(Map.Entry entry : mCacheInfoMap.entrySet()) {
+            String url = String.valueOf(entry.getKey());
             if (TextUtils.isEmpty(url)) {
                 continue;
             }
@@ -445,5 +445,22 @@ public class VideoProxyCacheManager {
             }
         }
         return false;
+    }
+
+    public long getTotalSizeByMd5(String md5) {
+        if (TextUtils.isEmpty(md5)) {
+            return -1L;
+        }
+        for(Map.Entry entry : mCacheInfoMap.entrySet()) {
+            String url = String.valueOf(entry.getKey());
+            if (TextUtils.isEmpty(url)) {
+                continue;
+            }
+            VideoCacheInfo cacheInfo = mCacheInfoMap.get(url);
+            if (cacheInfo != null && TextUtils.equals(cacheInfo.getMd5(), md5)) {
+                return cacheInfo.getTotalSize();
+            }
+        }
+        return -1L;
     }
 }
