@@ -144,10 +144,12 @@ public class NonM3U8CacheTask extends VideoCacheTask {
     @Override
     public void stopCacheTask() {
         pauseCacheTask();
-        long tempRangeStart = mRequestRange.getStart();
-        long tempRangeEnd = mCachedSize;
-        mRequestRange = new VideoRange(tempRangeStart, tempRangeEnd);
-        updateVideoRangeInfo();
+        if (!mCacheInfo.isCompleted() && mRequestRange != null) {
+            long tempRangeStart = mRequestRange.getStart();
+            long tempRangeEnd = mCachedSize;
+            mRequestRange = new VideoRange(tempRangeStart, tempRangeEnd);
+            updateVideoRangeInfo();
+        }
     }
 
     @Override

@@ -378,6 +378,8 @@ public class VideoProxyCacheManager {
         VideoCacheTask cacheTask = mCacheTaskMap.get(url);
         if (cacheTask != null) {
             cacheTask.resumeCacheTask();
+        } else {
+
         }
     }
 

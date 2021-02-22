@@ -62,6 +62,14 @@ public class LocalProxyVideoControl {
         VideoProxyCacheManager.getInstance().startRequestVideoInfo(videoUrl, headers, extraParams);
     }
 
+    public void pauseLocalProxyTask() {
+        VideoProxyCacheManager.getInstance().pauseCacheTask(mVideoUrl);
+    }
+
+    public void resumeLocalProxyTask() {
+        VideoProxyCacheManager.getInstance().resumeCacheTask(mVideoUrl);
+    }
+
     public void seekToCachePosition(long position) {
         long totalDuration = mPlayer.getDuration();
         if (totalDuration > 0) {
