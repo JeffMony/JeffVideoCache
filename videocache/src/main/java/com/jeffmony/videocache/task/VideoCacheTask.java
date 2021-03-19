@@ -77,6 +77,13 @@ public abstract class VideoCacheTask {
         return mTaskExecutor != null && mTaskExecutor.isShutdown();
     }
 
+    /**
+     * 非M3U8视频专用的接口
+     * @param startPosition
+     * @return
+     */
+    public boolean isMp4PositionSegExisted(long startPosition) { return false; }
+
     protected void setThreadPoolArgument(int corePoolSize, int maxPoolSize) {
         if (isTaskRunning()) {
             mTaskExecutor.setCorePoolSize(corePoolSize);

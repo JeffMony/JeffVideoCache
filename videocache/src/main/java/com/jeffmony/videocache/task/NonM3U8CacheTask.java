@@ -175,11 +175,39 @@ public class NonM3U8CacheTask extends VideoCacheTask {
     @Override
     public void seekToCacheTask(float percent) {
         //非M3U8视频用不到,因为这样估计请求的起始点,gap太大了.
+        //有拖动进度条, 肯定不能从原来的range 开始请求了, 有新的range请求, 那就要停掉原来的range请求
     }
 
     @Override
     public void seekToCacheTask(long startPosition) {
-        LogUtils.i(TAG, "seekToCacheTask=" + startPosition);
+        //真正的拖动进度条, 这儿要真正构建新的range请求
+        boolean shouldSeekToCacheTask = !isMp4PositionSegExisted(startPosition);
+        LogUtils.i(TAG, "seekToCacheTask ====> shouldSeekToCacheTask="+shouldSeekToCacheTask+", startPosition="+startPosition);
+        if (shouldSeekToCacheTask) {
+            pauseCacheTask();
+            startRequestVideoRange(startPosition);
+        }
+    }
+
+    @Override
+    public boolean isMp4PositionSegExisted(long startPosition) {
+        if (mVideoSegMap != null) {
+            for(Map.Entry entry : mVideoSegMap.entrySet()) {
+                long start = (long)entry.getKey();
+                long end = (long)entry.getValue();
+
+                //只有这样,才能说明当前的startPosition处于一个VideoRange范围内
+                if (start <=startPosition && startPosition < end) {
+                    return true;
+                }
+            }
+        }
+        if (mRequestRange != null) {
+            boolean result = mRequestRange.getStart() <= startPosition && startPosition < mRequestRange.getEnd();
+            result = result && (mCachedSize >= startPosition);
+            return result;
+        }
+        return false;
     }
 
     private void startRequestVideoRange(long curLength) {

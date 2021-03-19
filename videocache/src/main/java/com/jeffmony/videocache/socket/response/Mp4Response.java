@@ -79,6 +79,7 @@ public class Mp4Response extends BaseResponse {
             synchronized (lock) {
                 lock.wait(waitTime);
             }
+            isPositionSegExisted = VideoProxyCacheManager.getInstance().isMp4PositionSegExisted(mVideoUrl, mStartPosition);
         }
         LogUtils.i(TAG, "Current VideoFile exists : " + mFile.exists() + ", this=" + this);
         RandomAccessFile randomAccessFile = null;
@@ -108,7 +109,9 @@ public class Mp4Response extends BaseResponse {
                             lock.wait(waitTime);
                         }
                         available = randomAccessFile.length();
-                        waitTime *= 2;
+                        if (waitTime < MAX_WAIT_TIME) {
+                            waitTime *= 2;
+                        }
                     } else {
                         randomAccessFile.seek(offset);
                         int readLength;
@@ -140,7 +143,9 @@ public class Mp4Response extends BaseResponse {
                                 lock.wait(getDelayTime(waitTime));
                             }
                             available = randomAccessFile.length();
-                            waitTime *= 2;
+                            if (waitTime < MAX_WAIT_TIME) {
+                                waitTime *= 2;
+                            }
                         }
                     }
                 }

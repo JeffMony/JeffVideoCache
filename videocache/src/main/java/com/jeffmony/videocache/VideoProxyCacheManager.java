@@ -49,10 +49,10 @@ public class VideoProxyCacheManager {
     private Map<String, VideoCacheTask> mCacheTaskMap = new ConcurrentHashMap<>();
     private Map<String, VideoCacheInfo> mCacheInfoMap = new ConcurrentHashMap<>();
     private Map<String, IVideoCacheListener> mCacheListenerMap = new ConcurrentHashMap<>();
+    private Map<String, Long> mVideoSeekMd5PositionMap = new ConcurrentHashMap<>();      //发生seek的时候加入set, 如果可以播放了, remove掉
 
     private Set<String> mM3U8LocalProxyMd5Set = new ConcurrentSkipListSet<>();
     private Set<String> mM3U8LiveMd5Set = new ConcurrentSkipListSet<>();
-    private Set<String> mVideoSeekMd5Set = new ConcurrentSkipListSet<>();      //发生seek的时候加入set, 如果可以播放了, remove掉
 
     private String mPlayingUrlMd5;   //设置当前正在播放的视频url的MD5值
 
@@ -315,7 +315,9 @@ public class VideoProxyCacheManager {
 
             @Override
             public void onTaskProgress(float percent, long cachedSize, float speed) {
-                notifyLocalProxyLock(lock);
+                if (shouldNotifyLock(cacheInfo.getVideoUrl(), cacheInfo.getMd5())) {
+                    notifyLocalProxyLock(lock);
+                }
                 cacheInfo.setPercent(percent);
                 cacheInfo.setCachedSize(cachedSize);
                 cacheInfo.setSpeed(speed);
@@ -391,14 +393,36 @@ public class VideoProxyCacheManager {
     public void seekToCacheTask(String url, float percent) {
         VideoCacheTask cacheTask = mCacheTaskMap.get(url);
         if (cacheTask != null) {
-            addVideoSeekSet(url);
+            //当前seek到什么position在客户端不知道
+            addVideoSeekInfo(url);
             cacheTask.seekToCacheTask(percent);
         }
     }
 
-    private void addVideoSeekSet(String url) {
+    private void addVideoSeekInfo(String url) {
         String md5 = ProxyCacheUtils.computeMD5(url);
-        mVideoSeekMd5Set.add(md5);
+        LogUtils.i(TAG, "addVideoSeekSet = " + md5);
+        mVideoSeekMd5PositionMap.put(md5, -1L);
+    }
+
+    private boolean shouldNotifyLock(String url, String md5) {
+        long position = mVideoSeekMd5PositionMap.containsKey(md5) ? mVideoSeekMd5PositionMap.get(md5) : -1L;
+        if (position > 0) {
+            boolean isMp4PositionSegExisted = isMp4PositionSegExisted(url, position);
+            LogUtils.d(TAG, "shouldNotifyLock position = " + position + ", isMp4PositionSegExisted="+isMp4PositionSegExisted);
+            if (isMp4PositionSegExisted) {
+                removeVideoSeekInfo(md5);
+            }
+            return isMp4PositionSegExisted;
+        }
+        return true;
+    }
+
+    private void removeVideoSeekInfo(String md5) {
+        if (mVideoSeekMd5PositionMap.containsKey(md5)) {
+            LogUtils.i(TAG, "removeVideoSeekSet = " + md5);
+            mVideoSeekMd5PositionMap.remove(md5);
+        }
     }
 
     /**
@@ -408,7 +432,10 @@ public class VideoProxyCacheManager {
      */
     public void setVideoRangeRequest(String url, long startPosition) {
         String md5 = ProxyCacheUtils.computeMD5(url);
-        if (mVideoSeekMd5Set.contains(md5)) {
+        long oldPosition = mVideoSeekMd5PositionMap.containsKey(md5) ? mVideoSeekMd5PositionMap.get(md5) : -1L;
+        //说明这是一个新的seek操作
+        if (oldPosition == -1L) {
+            mVideoSeekMd5PositionMap.put(md5, startPosition);
             VideoCacheTask cacheTask = mCacheTaskMap.get(url);
             if (cacheTask != null) {
                 cacheTask.seekToCacheTask(startPosition);
@@ -416,24 +443,22 @@ public class VideoProxyCacheManager {
         }
     }
 
+    /**
+     * 当前MP4视频是否已经缓存到了startPosition位置
+     * @param url
+     * @param startPosition
+     * @return
+     */
     public boolean isMp4PositionSegExisted(String url, long startPosition) {
         if (startPosition == -1L) {
             //说明也没有seek 操作
             return true;
         }
-        VideoCacheInfo cacheInfo = mCacheInfoMap.get(url);
-        if (cacheInfo != null && cacheInfo.getVideoSegMap() != null) {
-            for(Map.Entry entry : cacheInfo.getVideoSegMap().entrySet()) {
-                long start = (long)entry.getKey();
-                long end = (long)entry.getValue();
-
-                //只有这样,才能说明当前的startPosition处于一个VideoRange范围内
-                if (start <=startPosition && startPosition < end) {
-                    return true;
-                }
-            }
+        VideoCacheTask cacheTask = mCacheTaskMap.get(url);
+        if (cacheTask != null) {
+            return cacheTask.isMp4PositionSegExisted(startPosition);
         }
-        return false;
+        return true;
     }
 
     private void notifyLocalProxyLock(Object lock) {
