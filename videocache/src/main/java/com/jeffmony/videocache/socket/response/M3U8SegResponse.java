@@ -27,7 +27,7 @@ import java.util.Map;
  */
 public class M3U8SegResponse extends BaseResponse {
 
-    private static final String TAG = "M3U8TsResponse";
+    private static final String TAG = "M3U8SegResponse";
     private File mSegFile;
     private String mSegUrl;
     private String mM3U8Md5;    //对应M3U8 url的md5值

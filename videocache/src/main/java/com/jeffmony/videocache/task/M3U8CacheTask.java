@@ -1,5 +1,7 @@
 package com.jeffmony.videocache.task;
 
+import android.text.TextUtils;
+
 import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.m3u8.M3U8;
 import com.jeffmony.videocache.m3u8.M3U8Seg;
@@ -14,6 +16,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.ProtocolException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -167,8 +170,7 @@ public class M3U8CacheTask extends VideoCacheTask {
                 }
                 inputStream = connection.getInputStream();
                 long contentLength = connection.getContentLength();
-                seg.setContentLength(contentLength);
-                saveSegFile(inputStream, segFile, contentLength);
+                saveSegFile(inputStream, segFile, contentLength, seg, downloadUrl);
             } else {
                 mContinuousSuccessSegCount = 0;
                 if (responseCode == HttpUtils.RESPONSE_503) {
@@ -197,23 +199,53 @@ public class M3U8CacheTask extends VideoCacheTask {
         }
     }
 
-    private void saveSegFile(InputStream inputStream, File file, long contentLength) throws IOException {
+    private void saveSegFile(InputStream inputStream, File file, long contentLength, M3U8Seg seg, String downloadUrl) throws Exception {
         FileOutputStream fos = null;
+        long totalLength = 0;
         try {
             fos = new FileOutputStream(file);
             int len;
             byte[] buf = new byte[StorageUtils.DEFAULT_BUFFER_SIZE];
             while ((len = inputStream.read(buf)) != -1) {
+                totalLength += len;
                 fos.write(buf, 0, len);
             }
+            if (contentLength > 0 && contentLength == totalLength) {
+                seg.setContentLength(contentLength);
+            } else {
+                seg.setContentLength(totalLength);
+            }
         } catch (IOException e) {
-            LogUtils.w(TAG,file.getAbsolutePath() + " saveFile failed, exception=" + e);
-            if (file.exists() && contentLength > 0 && contentLength == file.length()) {
+            if (file.exists() && ((contentLength > 0 && contentLength == file.length()) || (contentLength == -1 && totalLength == file.length()))) {
                 //这时候说明file已经下载完成了
             } else {
-                file.delete();
+                if ((e instanceof ProtocolException &&
+                        !TextUtils.isEmpty(e.getMessage()) &&
+                        e.getMessage().contains("unexpected end of stream")) &&
+                        (contentLength > totalLength && totalLength == file.length())) {
+                    if (file.length() == 0) {
+                        seg.setRetryCount(seg.getRetryCount() + 1);
+                        if (seg.getRetryCount() < HttpUtils.MAX_RETRY_COUNT) {
+                            downloadSegFile(seg, file, downloadUrl);
+                        } else {
+                            LogUtils.w(TAG, file.getAbsolutePath() + ", length=" + file.length() + ", saveFile failed, exception=" + e);
+                            if (file.exists()) {
+                                file.delete();
+                            }
+                            throw e;
+                        }
+                    } else {
+                        seg.setContentLength(totalLength);
+                    }
+                } else {
+                    LogUtils.w(TAG, file.getAbsolutePath() + " saveFile failed, exception=" + e);
+                    if (file.exists()) {
+                        file.delete();
+                    }
+                    throw e;
+                }
             }
-            throw e;
+
         } finally {
             ProxyCacheUtils.close(inputStream);
             ProxyCacheUtils.close(fos);
