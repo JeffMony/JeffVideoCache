@@ -23,9 +23,7 @@ public class LocalProxyVideoControl {
 
     private IVideoCacheListener mListener = new IVideoCacheListener() {
         @Override
-        public void onCacheStart(VideoCacheInfo cacheInfo) {
-
-        }
+        public void onCacheStart(VideoCacheInfo cacheInfo) { }
 
         @Override
         public void onCacheProgress(VideoCacheInfo cacheInfo) {
@@ -36,14 +34,10 @@ public class LocalProxyVideoControl {
         }
 
         @Override
-        public void onCacheError(VideoCacheInfo cacheInfo, int errorCode) {
-
-        }
+        public void onCacheError(VideoCacheInfo cacheInfo, int errorCode) { }
 
         @Override
-        public void onCacheForbidden(VideoCacheInfo cacheInfo) {
-
-        }
+        public void onCacheForbidden(VideoCacheInfo cacheInfo) { }
 
         @Override
         public void onCacheFinished(VideoCacheInfo cacheInfo) {

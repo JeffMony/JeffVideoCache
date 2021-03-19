@@ -79,10 +79,14 @@ public class M3U8CacheTask extends VideoCacheTask {
         }
         mCachedSegCount = tempCachedTs;
         mCachedSize = tempCachedSize;
+        if (mCachedSegCount == mTotalSegCount) {
+            mCacheInfo.setIsCompleted(true);
+        }
     }
 
     @Override
     public void pauseCacheTask() {
+        LogUtils.i(TAG, "pauseCacheTask");
         if (isTaskRunning()) {
             mTaskExecutor.shutdownNow();
         }
@@ -90,12 +94,20 @@ public class M3U8CacheTask extends VideoCacheTask {
 
     @Override
     public void stopCacheTask() {
-        pauseCacheTask();
+        LogUtils.i(TAG, "stopCacheTask");
+        if (isTaskRunning()) {
+            mTaskExecutor.shutdownNow();
+        }
     }
 
     @Override
     public void resumeCacheTask() {
         LogUtils.i(TAG, "resumeCacheTask");
+        if (isTaskShutdown()) {
+            initM3U8TsInfo();
+            int seekIndex = mCachedSegCount > 1 && mCachedSegCount <= mTotalSegCount ? mCachedSegCount - 1 : mCachedSegCount;
+            startRequestVideoRange(seekIndex);
+        }
     }
 
     @Override
