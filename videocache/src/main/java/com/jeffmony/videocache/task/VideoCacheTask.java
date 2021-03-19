@@ -71,6 +71,13 @@ public abstract class VideoCacheTask {
         return mTaskExecutor != null && !mTaskExecutor.isShutdown();
     }
 
+    protected void setThreadPoolArgument(int corePoolSize, int maxPoolSize) {
+        if (isTaskRunning()) {
+            mTaskExecutor.setCorePoolSize(corePoolSize);
+            mTaskExecutor.setMaximumPoolSize(maxPoolSize);
+        }
+    }
+
     protected void saveVideoInfo() {
         VideoProxyThreadUtils.submitRunnableTask(() -> StorageUtils.saveVideoCacheInfo(mCacheInfo, mSaveDir));
     }

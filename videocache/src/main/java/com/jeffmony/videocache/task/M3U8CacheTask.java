@@ -1,11 +1,9 @@
 package com.jeffmony.videocache.task;
 
 import com.jeffmony.videocache.common.VideoCacheException;
-import com.jeffmony.videocache.common.VideoParams;
 import com.jeffmony.videocache.m3u8.M3U8;
 import com.jeffmony.videocache.m3u8.M3U8Seg;
 import com.jeffmony.videocache.model.VideoCacheInfo;
-import com.jeffmony.videocache.socket.request.ResponseState;
 import com.jeffmony.videocache.utils.HttpUtils;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
@@ -26,23 +24,29 @@ import java.util.concurrent.TimeUnit;
 
 public class M3U8CacheTask extends VideoCacheTask {
 
-    private final static int THREAD_POOL_COUNT = 6;
     private static final String TAG = "M3U8CacheTask";
 
-    private int mCachedTs;
-    private int mTotalTs;
+    private static final int THREAD_POOL_COUNT = 6;
+    private static final int CONTINUOUS_SUCCESS_TS_THRESHOLD = 6;
+    private volatile int mM3U8DownloadPoolCount;
+    private volatile int mContinuousSuccessSegCount;   //连续请求分片成功的个数
+
+    private int mCachedSegCount;
+    private int mTotalSegCount;
     private Map<Integer, Long> mSegLengthMap;
     private List<M3U8Seg> mSegList;
 
     public M3U8CacheTask(VideoCacheInfo cacheInfo, Map<String, String> headers, M3U8 m3u8) {
         super(cacheInfo, headers);
         mSegList = m3u8.getSegList();
-        mTotalTs = cacheInfo.getTotalTs();
-        mCachedTs = cacheInfo.getCachedTs();
+        mTotalSegCount = cacheInfo.getTotalTs();
+        mCachedSegCount = cacheInfo.getCachedTs();
         mSegLengthMap = cacheInfo.getTsLengthMap();
         if (mSegLengthMap == null) {
             mSegLengthMap = new HashMap<>();
         }
+
+        mHeaders.put("Connection", "close");
     }
 
     @Override
@@ -52,7 +56,7 @@ public class M3U8CacheTask extends VideoCacheTask {
         }
         notifyOnTaskStart();
         initM3U8TsInfo();
-        int seekIndex = mCachedTs > 1 && mCachedTs <= mTotalTs ? mCachedTs - 1 : mCachedTs;
+        int seekIndex = mCachedSegCount > 1 && mCachedSegCount <= mTotalSegCount ? mCachedSegCount - 1 : mCachedSegCount;
         seekToCacheTask(seekIndex);
     }
 
@@ -71,7 +75,7 @@ public class M3U8CacheTask extends VideoCacheTask {
                 break;
             }
         }
-        mCachedTs = tempCachedTs;
+        mCachedSegCount = tempCachedTs;
         mCachedSize = tempCachedSize;
     }
 
@@ -94,7 +98,7 @@ public class M3U8CacheTask extends VideoCacheTask {
 
     @Override
     public void seekToCacheTask(float percent) {
-        int seekTsIndex = (int)(percent * mTotalTs);
+        int seekTsIndex = (int)(percent * mTotalSegCount);
         seekToCacheTask(seekTsIndex);
     }
 
@@ -110,12 +114,12 @@ public class M3U8CacheTask extends VideoCacheTask {
         mTaskExecutor = new ThreadPoolExecutor(THREAD_POOL_COUNT, THREAD_POOL_COUNT, 0L,
                 TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), Executors.defaultThreadFactory(),
                 new ThreadPoolExecutor.DiscardOldestPolicy());
-        for (int index = curTs; index < mTotalTs; index++) {
-            final M3U8Seg ts = mSegList.get(index);
+        for (int index = curTs; index < mTotalSegCount; index++) {
+            final M3U8Seg seg = mSegList.get(index);
             final int tsIndex = index;
             mTaskExecutor.execute(() -> {
                 try {
-                    downloadTsTask(ts, tsIndex);
+                    startDownloadSegTask(seg, tsIndex);
                 } catch (Exception e) {
                     LogUtils.w(TAG, "M3U8 ts video download failed, exception=" + e);
                     notifyOnTaskFailed(e);
@@ -124,73 +128,71 @@ public class M3U8CacheTask extends VideoCacheTask {
         }
     }
 
-    private void downloadTsTask(M3U8Seg ts, int tsIndex) throws Exception {
+    private void startDownloadSegTask(M3U8Seg seg, int tsIndex) throws Exception {
         String tsName = tsIndex + StorageUtils.TS_SUFFIX;
         File tsFile = new File(mSaveDir, tsName);
         if (!tsFile.exists()) {
             // ts is network resource, download ts file then rename it to local file.
-            downloadTsFile(ts, tsFile, 0);
+            downloadSegFile(seg, tsFile);
         }
 
         //确保当前文件下载完整
-        if (tsFile.exists() && tsFile.length() == ts.getContentLength()) {
+        if (tsFile.exists() && tsFile.length() == seg.getContentLength()) {
             //只有这样的情况下才能保证当前的ts文件真正被下载下来了
             mSegLengthMap.put(tsIndex, tsFile.length());
-            ts.setName(tsName);
-            ts.setFileSize(tsFile.length());
+            seg.setName(tsName);
+            seg.setFileSize(tsFile.length());
             //更新进度
             notifyCacheProgress();
         }
     }
 
-    private void downloadTsFile(M3U8Seg ts, File tsFile, int retryCount) throws Exception {
+    private void downloadSegFile(M3U8Seg seg, File segFile) throws Exception {
         HttpURLConnection connection = null;
         InputStream inputStream = null;
         try {
-            connection = HttpUtils.getConnection(ts.getUrl(), mHeaders);
+            connection = HttpUtils.getConnection(seg.getUrl(), mHeaders);
             int responseCode = connection.getResponseCode();
-            if (responseCode == ResponseState.OK.getResponseCode() || responseCode == ResponseState.PARTIAL_CONTENT.getResponseCode()) {
+            if (responseCode == HttpUtils.RESPONSE_200 || responseCode == HttpUtils.RESPONSE_206) {
+                seg.setRetryCount(0);
+                if (mContinuousSuccessSegCount > CONTINUOUS_SUCCESS_TS_THRESHOLD && mM3U8DownloadPoolCount < THREAD_POOL_COUNT) {
+                    mM3U8DownloadPoolCount += 1;
+                    mContinuousSuccessSegCount -= 1;
+                    setThreadPoolArgument(mM3U8DownloadPoolCount, mM3U8DownloadPoolCount);
+                }
                 inputStream = connection.getInputStream();
                 long contentLength = connection.getContentLength();
-                ts.setContentLength(contentLength);
-                saveTsFile(inputStream, tsFile, contentLength);
+                seg.setContentLength(contentLength);
+                saveSegFile(inputStream, segFile, contentLength);
             } else {
-                if (retryCount < VideoParams.RETRY_COUNT) {
-                    LogUtils.i(TAG, "Download exception, retry it, exception");
-                    retryDownloadTsFile(ts, tsFile, retryCount);
+                mContinuousSuccessSegCount = 0;
+                if (responseCode == HttpUtils.RESPONSE_503) {
+                    if (mM3U8DownloadPoolCount > 1) {
+                        mM3U8DownloadPoolCount -= 1;
+                        setThreadPoolArgument(mM3U8DownloadPoolCount, mM3U8DownloadPoolCount);
+                        downloadSegFile(seg, segFile);
+                    } else {
+                        seg.setRetryCount(seg.getRetryCount() + 1);
+                        if (seg.getRetryCount() < HttpUtils.MAX_RETRY_COUNT) {
+                            downloadSegFile(seg, segFile);
+                        } else {
+                            throw new VideoCacheException("retry download exceed the limit times, threadPool overload.");
+                        }
+                    }
                 } else {
-                    LogUtils.i(TAG, "M3U8 ts video downloadFile code=" + responseCode + ", url=" + ts.getUrl());
-                    throw new VideoCacheException("retry download exceed the limit times");
+                    throw new VideoCacheException("download failed, responseCode=" + responseCode);
                 }
-
             }
         } catch (Exception e) {
-            if (retryCount < VideoParams.RETRY_COUNT) {
-                LogUtils.i(TAG, "Download exception, retry it, exception = " + e);
-                retryDownloadTsFile(ts, tsFile, retryCount);
-            } else {
-                LogUtils.w(TAG, "downloadFile failed, exception=" + e.getMessage());
-                throw e;
-            }
+            LogUtils.w(TAG, "downloadFile failed, exception=" + e.getMessage());
+            throw e;
         } finally {
             HttpUtils.closeConnection(connection);
             ProxyCacheUtils.close(inputStream);
         }
     }
 
-    private void retryDownloadTsFile(M3U8Seg ts, File file, int retryCount) throws Exception  {
-        if (isTaskRunning()) {
-            if (retryCount < VideoParams.RETRY_COUNT) {
-                downloadTsFile(ts, file, retryCount + 1);
-            } else {
-                throw new VideoCacheException("retry download exceed the limit times");
-            }
-        } else {
-            throw new VideoCacheException("Download thread has been shutdown");
-        }
-    }
-
-    private void saveTsFile(InputStream inputStream, File file, long contentLength) throws IOException {
+    private void saveSegFile(InputStream inputStream, File file, long contentLength) throws IOException {
         FileOutputStream fos = null;
         try {
             fos = new FileOutputStream(file);
@@ -215,13 +217,13 @@ public class M3U8CacheTask extends VideoCacheTask {
 
     private void notifyCacheProgress() {
         updateM3U8TsInfo();
-        if (mCachedTs > mTotalTs) {
-            mCachedTs = mTotalTs;
+        if (mCachedSegCount > mTotalSegCount) {
+            mCachedSegCount = mTotalSegCount;
         }
-        mCacheInfo.setCachedTs(mCachedTs);
+        mCacheInfo.setCachedTs(mCachedSegCount);
         mCacheInfo.setTsLengthMap(mSegLengthMap);
         mCacheInfo.setCachedSize(mCachedSize);
-        float percent = mCachedTs * 1.0f * 100 / mTotalTs;
+        float percent = mCachedSegCount * 1.0f * 100 / mTotalSegCount;
 
         if (!ProxyCacheUtils.isFloatEqual(percent, mPercent)) {
             long nowTime = System.currentTimeMillis();
@@ -267,7 +269,7 @@ public class M3U8CacheTask extends VideoCacheTask {
                 tempCachedTs++;
             }
         }
-        mCachedTs = tempCachedTs;
+        mCachedSegCount = tempCachedTs;
         mCachedSize = tempCachedSize;
     }
 }
