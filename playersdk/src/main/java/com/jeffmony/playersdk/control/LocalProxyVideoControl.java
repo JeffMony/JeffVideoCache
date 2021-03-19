@@ -8,12 +8,15 @@ import com.jeffmony.videocache.common.ProxyMessage;
 import com.jeffmony.videocache.common.VideoParams;
 import com.jeffmony.videocache.listener.IVideoCacheListener;
 import com.jeffmony.videocache.model.VideoCacheInfo;
+import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class LocalProxyVideoControl {
+
+    private static final String TAG = "LocalProxyVideoControl";
 
     private BasePlayerImpl mPlayer;
     private String mVideoUrl;
@@ -63,10 +66,12 @@ public class LocalProxyVideoControl {
     }
 
     public void pauseLocalProxyTask() {
+        LogUtils.i(TAG, "pauseLocalProxyTask");
         VideoProxyCacheManager.getInstance().pauseCacheTask(mVideoUrl);
     }
 
     public void resumeLocalProxyTask() {
+        LogUtils.i(TAG, "resumeLocalProxyTask");
         VideoProxyCacheManager.getInstance().resumeCacheTask(mVideoUrl);
     }
 

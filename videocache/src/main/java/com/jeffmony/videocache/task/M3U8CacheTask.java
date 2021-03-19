@@ -59,7 +59,7 @@ public class M3U8CacheTask extends VideoCacheTask {
         notifyOnTaskStart();
         initM3U8TsInfo();
         int seekIndex = mCachedSegCount > 1 && mCachedSegCount <= mTotalSegCount ? mCachedSegCount - 1 : mCachedSegCount;
-        seekToCacheTask(seekIndex);
+        startRequestVideoRange(seekIndex);
     }
 
     private void initM3U8TsInfo() {
@@ -83,7 +83,7 @@ public class M3U8CacheTask extends VideoCacheTask {
 
     @Override
     public void pauseCacheTask() {
-        if (mTaskExecutor != null && !mTaskExecutor.isShutdown()) {
+        if (isTaskRunning()) {
             mTaskExecutor.shutdownNow();
         }
     }
@@ -95,21 +95,26 @@ public class M3U8CacheTask extends VideoCacheTask {
 
     @Override
     public void resumeCacheTask() {
+        LogUtils.i(TAG, "resumeCacheTask");
+    }
 
+    @Override
+    public void seekToCacheTask(long startPosition) {
+        //针对非M3U8视频的接口, M3U8视频可以忽略
     }
 
     @Override
     public void seekToCacheTask(float percent) {
         int seekTsIndex = (int)(percent * mTotalSegCount);
-        seekToCacheTask(seekTsIndex);
+        startRequestVideoRange(seekTsIndex);
     }
 
-    private void seekToCacheTask(int curTs) {
+    private void startRequestVideoRange(int curTs) {
         if (mCacheInfo.isCompleted()) {
             notifyOnTaskCompleted();
             return;
         }
-        if (mTaskExecutor != null && !mTaskExecutor.isShutdown()) {
+        if (isTaskRunning()) {
             //已经存在的任务不需要重新创建了
             return;
         }

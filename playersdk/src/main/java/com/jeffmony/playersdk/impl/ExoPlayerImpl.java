@@ -78,6 +78,9 @@ public class ExoPlayerImpl extends BasePlayerImpl {
 
     @Override
     public void start() throws IllegalStateException {
+        if (mPlayerSettings.getLocalProxyEnable()) {
+            mLocalProxyVideoControl.resumeLocalProxyTask();
+        }
         mExoPlayer.setPlayWhenReady(true);
     }
 
@@ -88,6 +91,9 @@ public class ExoPlayerImpl extends BasePlayerImpl {
 
     @Override
     public void pause() throws IllegalStateException {
+        if (mPlayerSettings.getLocalProxyEnable()) {
+            mLocalProxyVideoControl.pauseLocalProxyTask();
+        }
         mExoPlayer.setPlayWhenReady(false);
     }
 

@@ -26,12 +26,39 @@ public class Mp4Response extends BaseResponse {
 
     private File mFile;
     private String mMd5;
+    private long mStartPosition = -1L;
 
     public Mp4Response(HttpRequest request, String videoUrl, Map<String, String> headers) {
         super(request, videoUrl, headers);
         mMd5 = ProxyCacheUtils.computeMD5(videoUrl);
         mFile = new File(mCachePath, mMd5 + File.separator + mMd5 + StorageUtils.NON_M3U8_SUFFIX);
         mResponseState = ResponseState.OK;
+        String rangeStr = request.getRangeString();
+        mStartPosition = getRequestStartPosition(rangeStr);
+        LogUtils.i(TAG, "Range header=" + request.getRangeString() + ", start position="+mStartPosition);
+        if (mStartPosition != -1) {
+            //服务端将range起始位置设置到客户端
+            VideoProxyCacheManager.getInstance().setVideoRangeRequest(videoUrl, mStartPosition);
+        }
+    }
+
+    /**
+     * 获取range请求的起始位置
+     * bytes=15372019-
+     * @param rangeStr
+     * @return
+     */
+    private long getRequestStartPosition(String rangeStr) {
+        if (TextUtils.isEmpty(rangeStr)) {
+            return -1L;
+        }
+        if (rangeStr.startsWith("bytes=")) {
+            rangeStr = rangeStr.substring("bytes=".length());
+            if (rangeStr.contains("-")) {
+                return Long.parseLong(rangeStr.split("-")[0]);
+            }
+        }
+        return -1L;
     }
 
     @Override
@@ -47,9 +74,14 @@ public class Mp4Response extends BaseResponse {
                 lock.wait(waitTime);
             }
         }
+        boolean isPositionSegExisted = VideoProxyCacheManager.getInstance().isMp4PositionSegExisted(mVideoUrl, mStartPosition);
+        while(!isPositionSegExisted) {
+            synchronized (lock) {
+                lock.wait(waitTime);
+            }
+        }
         LogUtils.i(TAG, "Current VideoFile exists : " + mFile.exists() + ", this=" + this);
         RandomAccessFile randomAccessFile = null;
-
         try {
             randomAccessFile = new RandomAccessFile(mFile, "r");
             if (randomAccessFile == null) {
@@ -76,9 +108,7 @@ public class Mp4Response extends BaseResponse {
                             lock.wait(waitTime);
                         }
                         available = randomAccessFile.length();
-                        if (waitTime < MAX_WAIT_TIME) {
-                            waitTime *= 2;
-                        }
+                        waitTime *= 2;
                     } else {
                         randomAccessFile.seek(offset);
                         int readLength;

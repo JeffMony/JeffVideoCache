@@ -53,6 +53,8 @@ public abstract class VideoCacheTask {
 
     public abstract void seekToCacheTask(float percent);
 
+    public abstract void seekToCacheTask(long startPosition);    //非M3U8视频用到的
+
     public abstract void resumeCacheTask();
 
     protected void notifyOnTaskStart() {
@@ -67,8 +69,12 @@ public abstract class VideoCacheTask {
         mListener.onTaskCompleted(mTotalSize);
     }
 
-    protected boolean isTaskRunning() {
+    public boolean isTaskRunning() {
         return mTaskExecutor != null && !mTaskExecutor.isShutdown();
+    }
+
+    public boolean isTaskShutdown() {
+        return mTaskExecutor != null && mTaskExecutor.isShutdown();
     }
 
     protected void setThreadPoolArgument(int corePoolSize, int maxPoolSize) {

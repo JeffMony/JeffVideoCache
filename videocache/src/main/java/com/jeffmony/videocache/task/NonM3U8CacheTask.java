@@ -82,7 +82,7 @@ public class NonM3U8CacheTask extends VideoCacheTask {
             return;
         }
         notifyOnTaskStart();
-        seekToCacheTask(0L);   //传入一个起始位置,需要到已缓存的文件中去查找一下
+        startRequestVideoRange(0L);   //传入一个起始位置,需要到已缓存的文件中去查找一下
     }
 
 
@@ -136,7 +136,7 @@ public class NonM3U8CacheTask extends VideoCacheTask {
 
     @Override
     public void pauseCacheTask() {
-        if (mTaskExecutor != null && !mTaskExecutor.isShutdown()) {
+        if (isTaskRunning()) {
             mTaskExecutor.shutdownNow();
         }
     }
@@ -154,15 +154,20 @@ public class NonM3U8CacheTask extends VideoCacheTask {
 
     @Override
     public void resumeCacheTask() {
-
+        LogUtils.i(TAG, "resumeCacheTask");
     }
 
     @Override
     public void seekToCacheTask(float percent) {
-
+        //非M3U8视频用不到,因为这样估计请求的起始点,gap太大了.
     }
 
-    private void seekToCacheTask(long curLength) {
+    @Override
+    public void seekToCacheTask(long startPosition) {
+        LogUtils.i(TAG, "seekToCacheTask=" + startPosition);
+    }
+
+    private void startRequestVideoRange(long curLength) {
         if (mCacheInfo.isCompleted()) {
             notifyOnTaskCompleted();
             return;
@@ -259,7 +264,7 @@ public class NonM3U8CacheTask extends VideoCacheTask {
                 //说明已经缓存好,但是整视频中间还有一些洞,但是不影响,可以忽略
             } else {
                 //开启下一段视频分片的缓存
-                seekToCacheTask(position);
+                startRequestVideoRange(position);
             }
         }
     }
