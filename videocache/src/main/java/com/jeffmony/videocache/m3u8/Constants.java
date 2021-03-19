@@ -15,6 +15,7 @@ public class Constants {
     public static final String TAG_ENDLIST = "#EXT-X-ENDLIST"; // It is not live if hls has '#EXT-X-ENDLIST' tag; Or it
     // is.
     public static final String TAG_KEY = "#EXT-X-KEY"; // Optional
+    public static final String TAG_INIT_SEGMENT = "#EXT-X-MAP";
 
     // extra hls tag:
 
@@ -43,4 +44,5 @@ public class Constants {
     public static final Pattern REGEX_URI = Pattern.compile("URI=\"(.+?)\"");
     public static final Pattern REGEX_IV = Pattern.compile("IV=([^,.*]+)");
     public static final String KEYFORMAT_IDENTITY = "identity";
+    public static final Pattern REGEX_ATTR_BYTERANGE = Pattern.compile("BYTERANGE=\"(\\d+(?:@\\d+)?)\\b\"");
 }

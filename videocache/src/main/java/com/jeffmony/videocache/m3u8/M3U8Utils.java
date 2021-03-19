@@ -57,9 +57,12 @@ public class M3U8Utils {
             boolean hasEndList = false;
             boolean hasMasterList = false;
             boolean hasKey = false;
+            boolean hasInitSegment = false;
             String method = null;
             String keyIv = null;
             String keyUrl = null;
+            String initSegmentUri = null;
+            String segmentByteRange = null;
             float segDuration = 0;
             int segIndex = 0;
 
@@ -118,6 +121,13 @@ public class M3U8Utils {
                                 // Do nothing.
                             }
                         }
+                    } else if (line.startsWith(Constants.TAG_INIT_SEGMENT)) {
+                        String tempInitSegmentUri = parseStringAttr(line, Constants.REGEX_URI);
+                        if (!TextUtils.isEmpty(tempInitSegmentUri)) {
+                            hasInitSegment = true;
+                            initSegmentUri = UrlUtils.getM3U8MasterUrl(videoUrl, tempInitSegmentUri);
+                            segmentByteRange = parseOptionalStringAttr(line, Constants.REGEX_ATTR_BYTERANGE);
+                        }
                     }
                     continue;
                 }
@@ -144,14 +154,20 @@ public class M3U8Utils {
                     seg.setKeyIv(keyIv);
                     seg.setKeyUrl(keyUrl);
                 }
+                if (hasInitSegment) {
+                    seg.setInitSegmentInfo(initSegmentUri, segmentByteRange);
+                }
                 m3u8.addSeg(seg);
                 segIndex++;
                 segDuration = 0;
                 hasDiscontinuity = false;
                 hasKey = false;
+                hasInitSegment = false;
                 method = null;
                 keyUrl = null;
                 keyIv = null;
+                initSegmentUri = null;
+                segmentByteRange = null;
             }
 
             m3u8.setTargetDuration(targetDuration);
@@ -183,9 +199,12 @@ public class M3U8Utils {
             boolean hasDiscontinuity = false;
             boolean hasEndList = false;
             boolean hasKey = false;
+            boolean hasInitSegment = false;
             String method = null;
             String keyIv = null;
             String keyUrl = null;
+            String initSegmentUri = null;
+            String segmentByteRange = null;
             float segDuration = 0;
             int segIndex = 0;
 
@@ -242,6 +261,12 @@ public class M3U8Utils {
                                 // Do nothing.
                             }
                         }
+                    } else if (line.startsWith(Constants.TAG_INIT_SEGMENT)) {
+                        initSegmentUri = parseStringAttr(line, Constants.REGEX_URI);
+                        if (!TextUtils.isEmpty(initSegmentUri)) {
+                            hasInitSegment = true;
+                            segmentByteRange = parseOptionalStringAttr(line, Constants.REGEX_ATTR_BYTERANGE);
+                        }
                     }
                     continue;
                 }
@@ -262,14 +287,20 @@ public class M3U8Utils {
                     seg.setKeyIv(keyIv);
                     seg.setKeyUrl(keyUrl);
                 }
+                if (hasInitSegment) {
+                    seg.setInitSegmentInfo(initSegmentUri, segmentByteRange);
+                }
                 m3u8.addSeg(seg);
                 segIndex++;
                 segDuration = 0;
                 hasDiscontinuity = false;
                 hasKey = false;
+                hasInitSegment = false;
                 method = null;
                 keyUrl = null;
                 keyIv = null;
+                initSegmentUri = null;
+                segmentByteRange = null;
             }
 
             m3u8.setTargetDuration(targetDuration);
@@ -321,6 +352,15 @@ public class M3U8Utils {
             bfw.write(Constants.TAG_MEDIA_SEQUENCE + ":" + m3u8.getSequence() + "\n");
             bfw.write(Constants.TAG_TARGET_DURATION + ":" + m3u8.getTargetDuration() + "\n");
             for (M3U8Seg m3u8Ts : m3u8.getSegList()) {
+                if (m3u8Ts.hasInitSegment()) {
+                    String initSegmentInfo;
+                    if (m3u8Ts.getSegmentByteRange() != null) {
+                        initSegmentInfo = "URI=\"" + m3u8Ts.getInitSegmentUri() + "\"" + ",BYTERANGE=\"" + m3u8Ts.getSegmentByteRange() + "\"";
+                    } else {
+                        initSegmentInfo = "URI=\"" + m3u8Ts.getInitSegmentUri()  + "\"";
+                    }
+                    bfw.write(Constants.TAG_INIT_SEGMENT + ":" + initSegmentInfo + "\n");
+                }
                 if (m3u8Ts.isHasKey() && !TextUtils.isEmpty(m3u8Ts.getMethod())) {
                     String key = "METHOD=" + m3u8Ts.getMethod();
                     if (!TextUtils.isEmpty(m3u8Ts.getKeyUrl())) {
@@ -367,6 +407,13 @@ public class M3U8Utils {
         bfw.write(Constants.TAG_TARGET_DURATION + ":" + m3u8.getTargetDuration() + "\n");
 
         for (M3U8Seg m3u8Ts : m3u8.getSegList()) {
+            if (m3u8Ts.hasInitSegment()) {
+                String initSegmentInfo = "URI=\"" + m3u8Ts.getInitSegProxyUrl(md5, headers) + "\"";
+                if (m3u8Ts.getSegmentByteRange() != null) {
+                    initSegmentInfo += ",BYTERANGE=\"" + m3u8Ts.getSegmentByteRange() +"\"";
+                }
+                bfw.write(Constants.TAG_INIT_SEGMENT + ":" + initSegmentInfo + "\n");
+            }
             if (m3u8Ts.isHasKey() && !TextUtils.isEmpty(m3u8Ts.getMethod())) {
                 String key = "METHOD=" + m3u8Ts.getMethod();
                 if (!TextUtils.isEmpty(m3u8Ts.getKeyUrl())) {
@@ -381,7 +428,7 @@ public class M3U8Utils {
                 bfw.write(Constants.TAG_DISCONTINUITY + "\n");
             }
             bfw.write(Constants.TAG_MEDIA_DURATION + ":" + m3u8Ts.getDuration() + ",\n");
-            bfw.write(m3u8Ts.getTsProxyUrl(md5, headers) + "\n");
+            bfw.write(m3u8Ts.getSegProxyUrl(md5, headers) + "\n");
         }
         bfw.write(Constants.TAG_ENDLIST);
         bfw.flush();

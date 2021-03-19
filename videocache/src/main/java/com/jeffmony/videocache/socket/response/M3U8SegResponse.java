@@ -23,27 +23,30 @@ import java.util.Map;
  * @author jeffmony
  * M3U8-TS视频的local server端
  *
- * https://iqiyi.cdn9-okzy.com/20210217/22550_b228d68b/1000k/hls/6f2ac117eac000000.ts&jeffmony_ts&/c462e3fd379ce23333aabed0a3837848/0.ts&jeffmony_ts&unknown
+ * https://iqiyi.cdn9-okzy.com/20210217/22550_b228d68b/1000k/hls/6f2ac117eac000000.ts&jeffmony_seg&/c462e3fd379ce23333aabed0a3837848/0.ts&jeffmony_seg&unknown
  */
-public class M3U8TsResponse extends BaseResponse {
+public class M3U8SegResponse extends BaseResponse {
 
     private static final String TAG = "M3U8TsResponse";
-    private File mTsFile;
-    private String mTsUrl;
+    private File mSegFile;
+    private String mSegUrl;
     private String mM3U8Md5;    //对应M3U8 url的md5值
-    private int mTsIndex;       //M3U8 ts对应的索引位置
-    private long mTsLength;
+    private int mSegIndex;      //M3U8 ts对应的索引位置
+    private long mSegLength;
+    private String mFileName;
 
-    public M3U8TsResponse(HttpRequest request, String videoUrl, Map<String, String> headers, String fileName) throws Exception {
+    public M3U8SegResponse(HttpRequest request, String videoUrl, Map<String, String> headers, String fileName) throws Exception {
         super(request, videoUrl, headers);
-        mTsUrl = videoUrl;
-        mTsFile = new File(mCachePath, fileName);
+        mSegUrl = videoUrl;
+        mSegFile = new File(mCachePath, fileName);
+        LogUtils.i(TAG, "SegFilePath="+mSegFile.getAbsolutePath());
+        mFileName = mSegFile.getName();
         mM3U8Md5 = getM3U8Md5(fileName);
         if (mHeaders == null) {
             mHeaders = new HashMap<>();
         }
         mHeaders.put("Connection", "close");
-        mTsIndex = getTsIndex(fileName);
+        mSegIndex = getSegIndex(fileName);
         mResponseState = ResponseState.OK;
     }
 
@@ -56,7 +59,7 @@ public class M3U8TsResponse extends BaseResponse {
         return str.substring(0, index);
     }
 
-    private int getTsIndex(String str) throws VideoCacheException {
+    private int getSegIndex(String str) throws VideoCacheException {
         int idotIndex = str.lastIndexOf(".");
         if (idotIndex == -1) {
             throw new VideoCacheException("Error index during getTcd sIndex");
@@ -67,25 +70,37 @@ public class M3U8TsResponse extends BaseResponse {
             throw new VideoCacheException("Error index during getTsIndex");
         }
         str = str.substring(seperatorIndex + 1);
+        if (str.startsWith(ProxyCacheUtils.INIT_SEGMENT_PREFIX)) {
+            str = str.substring(ProxyCacheUtils.INIT_SEGMENT_PREFIX.length());
+            LogUtils.i(TAG, "str = " + str);
+        }
         return Integer.parseInt(str);
     }
 
     @Override
     public void sendBody(Socket socket, OutputStream outputStream, long pending) throws Exception {
-        boolean isM3U8TsCompleted = VideoProxyCacheManager.getInstance().isM3U8TsCompleted(mM3U8Md5, mTsIndex, mTsFile.getAbsolutePath());
-        while (!isM3U8TsCompleted) {
-            downloadTsFile(mTsUrl, mTsFile);
-            isM3U8TsCompleted = VideoProxyCacheManager.getInstance().isM3U8TsCompleted(mM3U8Md5, mTsIndex, mTsFile.getAbsolutePath());
-            if (mTsLength > 0 && mTsLength == mTsFile.length()) {
-                break;
+        if (mFileName.startsWith(ProxyCacheUtils.INIT_SEGMENT_PREFIX)) {
+            while(!mSegFile.exists()) {
+                downloadTsFile(mSegUrl, mSegFile);
+                if (mSegLength > 0 && mSegLength == mSegFile.length()) {
+                    break;
+                }
             }
+        } else {
+            boolean isM3U8TsCompleted = VideoProxyCacheManager.getInstance().isM3U8TsCompleted(mM3U8Md5, mSegIndex, mSegFile.getAbsolutePath());
+            while (!isM3U8TsCompleted) {
+                downloadTsFile(mSegUrl, mSegFile);
+                isM3U8TsCompleted = VideoProxyCacheManager.getInstance().isM3U8TsCompleted(mM3U8Md5, mSegIndex, mSegFile.getAbsolutePath());
+                if (mSegLength > 0 && mSegLength == mSegFile.length()) {
+                    break;
+                }
+            }
+            LogUtils.d(TAG, "FilePath=" + mSegFile.getAbsolutePath() + ", FileLength=" + mSegFile.length() + ", segLength=" + mSegLength);
         }
-        LogUtils.d(TAG, "FilePath="+mTsFile.getAbsolutePath()+", FileLength="+mTsFile.length()+", tsLength="+mTsLength);
-
         RandomAccessFile randomAccessFile = null;
 
         try {
-            randomAccessFile = new RandomAccessFile(mTsFile, "r");
+            randomAccessFile = new RandomAccessFile(mSegFile, "r");
             if (randomAccessFile == null) {
                 throw new VideoCacheException("M3U8 ts file not found, this=" + this);
             }
@@ -119,8 +134,8 @@ public class M3U8TsResponse extends BaseResponse {
             int responseCode = connection.getResponseCode();
             if (responseCode == ResponseState.OK.getResponseCode() || responseCode == ResponseState.PARTIAL_CONTENT.getResponseCode()) {
                 inputStream = connection.getInputStream();
-                mTsLength = connection.getContentLength();
-                saveTsFile(inputStream, file);
+                mSegLength = connection.getContentLength();
+                saveSegFile(inputStream, file);
             }
         } catch (Exception e) {
             throw e;
@@ -132,7 +147,7 @@ public class M3U8TsResponse extends BaseResponse {
         }
     }
 
-    private void saveTsFile(InputStream inputStream, File file) throws Exception {
+    private void saveSegFile(InputStream inputStream, File file) throws Exception {
         FileOutputStream fos = null;
         try {
             fos = new FileOutputStream(file);
@@ -142,7 +157,7 @@ public class M3U8TsResponse extends BaseResponse {
                 fos.write(buffer, 0, readLength);
             }
         } catch (Exception e) {
-            if (file.exists() && mTsLength > 0 && mTsLength == file.length()) {
+            if (file.exists() && mSegLength > 0 && mSegLength == file.length()) {
                 //说明此文件下载完成
             } else {
                 file.delete();

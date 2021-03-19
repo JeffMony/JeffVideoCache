@@ -115,10 +115,9 @@ public class M3U8CacheTask extends VideoCacheTask {
                 new ThreadPoolExecutor.DiscardOldestPolicy());
         for (int index = curTs; index < mTotalSegCount; index++) {
             final M3U8Seg seg = mSegList.get(index);
-            final int tsIndex = index;
             mTaskExecutor.execute(() -> {
                 try {
-                    startDownloadSegTask(seg, tsIndex);
+                    startDownloadSegTask(seg);
                 } catch (Exception e) {
                     LogUtils.w(TAG, "M3U8 ts video download failed, exception=" + e);
                     notifyOnTaskFailed(e);
@@ -127,18 +126,25 @@ public class M3U8CacheTask extends VideoCacheTask {
         }
     }
 
-    private void startDownloadSegTask(M3U8Seg seg, int segIndex) throws Exception {
+    private void startDownloadSegTask(M3U8Seg seg) throws Exception {
+        if (seg.hasInitSegment()) {
+            String initSegmentName = seg.getInitSegmentName();
+            File initSegmentFile = new File(mSaveDir, initSegmentName);
+            if (!initSegmentFile.exists()) {
+                downloadSegFile(seg, initSegmentFile, seg.getInitSegmentUri());
+            }
+        }
         String segName = seg.getSegName();
         File segFile = new File(mSaveDir, segName);
         if (!segFile.exists()) {
             // ts is network resource, download ts file then rename it to local file.
-            downloadSegFile(seg, segFile);
+            downloadSegFile(seg, segFile, seg.getUrl());
         }
 
         //确保当前文件下载完整
         if (segFile.exists() && segFile.length() == seg.getContentLength()) {
             //只有这样的情况下才能保证当前的ts文件真正被下载下来了
-            mSegLengthMap.put(segIndex, segFile.length());
+            mSegLengthMap.put(seg.getSegIndex(), segFile.length());
             seg.setName(segName);
             seg.setFileSize(segFile.length());
             //更新进度
@@ -146,11 +152,11 @@ public class M3U8CacheTask extends VideoCacheTask {
         }
     }
 
-    private void downloadSegFile(M3U8Seg seg, File segFile) throws Exception {
+    private void downloadSegFile(M3U8Seg seg, File segFile, String downloadUrl) throws Exception {
         HttpURLConnection connection = null;
         InputStream inputStream = null;
         try {
-            connection = HttpUtils.getConnection(seg.getUrl(), mHeaders);
+            connection = HttpUtils.getConnection(downloadUrl, mHeaders);
             int responseCode = connection.getResponseCode();
             if (responseCode == HttpUtils.RESPONSE_200 || responseCode == HttpUtils.RESPONSE_206) {
                 seg.setRetryCount(0);
@@ -169,11 +175,11 @@ public class M3U8CacheTask extends VideoCacheTask {
                     if (mM3U8DownloadPoolCount > 1) {
                         mM3U8DownloadPoolCount -= 1;
                         setThreadPoolArgument(mM3U8DownloadPoolCount, mM3U8DownloadPoolCount);
-                        downloadSegFile(seg, segFile);
+                        downloadSegFile(seg, segFile, downloadUrl);
                     } else {
                         seg.setRetryCount(seg.getRetryCount() + 1);
                         if (seg.getRetryCount() < HttpUtils.MAX_RETRY_COUNT) {
-                            downloadSegFile(seg, segFile);
+                            downloadSegFile(seg, segFile, downloadUrl);
                         } else {
                             throw new VideoCacheException("retry download exceed the limit times, threadPool overload.");
                         }

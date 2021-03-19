@@ -27,6 +27,9 @@ public class M3U8Seg implements Comparable<M3U8Seg> {
     private String mKeyUrl;                //分片文件的密钥地址
     private String mKeyIv;                 //密钥IV
     private int mRetryCount;               //重试请求次数
+    private boolean mHasInitSegment;       //分片前是否有#EXT-X-MAP
+    private String mInitSegmentUri;        //MAP的url
+    private String mSegmentByteRange;      //MAP的range
 
     public String getUrl() {
         return mUrl;
@@ -133,6 +136,31 @@ public class M3U8Seg implements Comparable<M3U8Seg> {
 
     public int getRetryCount() { return mRetryCount; }
 
+    public void setInitSegmentInfo(String initSegmentUri, String segmentByteRange) {
+        mHasInitSegment = true;
+        mInitSegmentUri = initSegmentUri;
+        mSegmentByteRange = segmentByteRange;
+    }
+
+    public boolean hasInitSegment() { return mHasInitSegment; }
+
+    public String getInitSegmentUri() { return mInitSegmentUri; }
+
+    public String getSegmentByteRange() { return mSegmentByteRange; }
+
+    public String getInitSegmentName() {
+        String suffixName = "";
+        if (!TextUtils.isEmpty(mInitSegmentUri)) {
+            Uri uri = Uri.parse(mInitSegmentUri);
+            String fileName = uri.getLastPathSegment();
+            if (!TextUtils.isEmpty(fileName)) {
+                fileName = fileName.toLowerCase();
+                suffixName = ProxyCacheUtils.getSuffixName(fileName);
+            }
+        }
+        return ProxyCacheUtils.INIT_SEGMENT_PREFIX + mSegIndex + suffixName;
+    }
+
     @Override
     public int compareTo(M3U8Seg m3u8Ts) {
         return mUrl.compareTo(m3u8Ts.getUrl());
@@ -143,14 +171,27 @@ public class M3U8Seg implements Comparable<M3U8Seg> {
         return super.hashCode();
     }
 
-    public String getTsProxyUrl(String md5, Map<String, String> headers) {
+    public String getInitSegProxyUrl(String md5, Map<String, String> headers) {
         //三个字符串
-        //1.ts的url
-        //2.ts存储的位置
-        //3.ts url对应的请求headers
-        String proxyExtraInfo = mUrl + ProxyCacheUtils.TS_PROXY_SPLIT_STR +
+        //1.init Seg的url
+        //2.init Seg存储的位置
+        //3.init Seg url对应的请求headers
+        String proxyExtraInfo = mInitSegmentUri + ProxyCacheUtils.SEG_PROXY_SPLIT_STR +
+                File.separator + md5 + File.separator + getInitSegmentName() +
+                ProxyCacheUtils.SEG_PROXY_SPLIT_STR + ProxyCacheUtils.map2Str(headers);
+        String proxyUrl = String.format(Locale.US, "http://%s:%d/%s", ProxyCacheUtils.LOCAL_PROXY_HOST,
+                ProxyCacheUtils.getLocalPort(), ProxyCacheUtils.encodeUriWithBase64(proxyExtraInfo));
+        return proxyUrl;
+    }
+
+    public String getSegProxyUrl(String md5, Map<String, String> headers) {
+        //三个字符串
+        //1.Seg的url
+        //2.Seg存储的位置
+        //3.Seg url对应的请求headers
+        String proxyExtraInfo = mUrl + ProxyCacheUtils.SEG_PROXY_SPLIT_STR +
                 File.separator + md5 + File.separator + getSegName() +
-                ProxyCacheUtils.TS_PROXY_SPLIT_STR + ProxyCacheUtils.map2Str(headers);
+                ProxyCacheUtils.SEG_PROXY_SPLIT_STR + ProxyCacheUtils.map2Str(headers);
         String proxyUrl = String.format(Locale.US, "http://%s:%d/%s", ProxyCacheUtils.LOCAL_PROXY_HOST,
                 ProxyCacheUtils.getLocalPort(), ProxyCacheUtils.encodeUriWithBase64(proxyExtraInfo));
         return proxyUrl;

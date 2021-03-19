@@ -6,7 +6,7 @@ import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.socket.request.HttpRequest;
 import com.jeffmony.videocache.socket.response.BaseResponse;
 import com.jeffmony.videocache.socket.response.M3U8Response;
-import com.jeffmony.videocache.socket.response.M3U8TsResponse;
+import com.jeffmony.videocache.socket.response.M3U8SegResponse;
 import com.jeffmony.videocache.socket.response.Mp4Response;
 import com.jeffmony.videocache.utils.HttpUtils;
 import com.jeffmony.videocache.utils.LogUtils;
@@ -41,7 +41,7 @@ public class SocketProcessTask implements Runnable {
             HttpRequest request = new HttpRequest(inputStream, mSocket.getInetAddress());
             while(!mSocket.isClosed()) {
                 request.parseRequest();
-                BaseResponse response = null;
+                BaseResponse response;
                 String url = request.getUri();
                 url = url.substring(1);
                 url = ProxyCacheUtils.decodeUriWithBase64(url);
@@ -73,9 +73,9 @@ public class SocketProcessTask implements Runnable {
                         }
                     }
                     response.sendResponse(mSocket, outputStream);
-                } else if (url.contains(ProxyCacheUtils.TS_PROXY_SPLIT_STR)) {
+                } else if (url.contains(ProxyCacheUtils.SEG_PROXY_SPLIT_STR)) {
                     //说明是M3U8 ts格式的文件
-                    String[] videoInfoArr = url.split(ProxyCacheUtils.TS_PROXY_SPLIT_STR);
+                    String[] videoInfoArr = url.split(ProxyCacheUtils.SEG_PROXY_SPLIT_STR);
                     if (videoInfoArr.length < 3) {
                         throw new VideoCacheException("Local Socket for M3U8 ts file Error Argument");
                     }
@@ -84,7 +84,7 @@ public class SocketProcessTask implements Runnable {
                     String videoHeaders = videoInfoArr[2];
                     Map<String, String> headers = ProxyCacheUtils.str2Map(videoHeaders);
                     LogUtils.d(TAG, videoUrl + "\n" + fileName + "\n" + videoHeaders);
-                    response = new M3U8TsResponse(request, url, headers, fileName);
+                    response = new M3U8SegResponse(request, url, headers, fileName);
                     response.sendResponse(mSocket, outputStream);
                 } else {
                     throw new VideoCacheException("Local Socket Error url");

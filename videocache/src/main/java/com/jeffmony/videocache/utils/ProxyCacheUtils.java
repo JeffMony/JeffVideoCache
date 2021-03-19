@@ -25,12 +25,13 @@ public class ProxyCacheUtils {
 
     public static final String LOCAL_PROXY_HOST = "127.0.0.1";
     public static final String LOCAL_PROXY_URL = "http://" + LOCAL_PROXY_HOST;
-    public static final String TS_PROXY_SPLIT_STR = "&jeffmony_ts&";             //ts文件分隔符
+    public static final String SEG_PROXY_SPLIT_STR = "&jeffmony_seg&";           //M3U8 分片文件分隔符
     public static final String VIDEO_PROXY_SPLIT_STR = "&jeffmony_video&";       //视频分隔符
     public static final String HEADER_SPLIT_STR = "&jeffmony_header&";           //请求头部分隔符
     public static final String UNKNOWN = "unknown";
     public static final String M3U8 = "m3u8";
     public static final String NON_M3U8 = "non_m3u8";
+    public static final String INIT_SEGMENT_PREFIX = "init_seg_";
 
     private static VideoCacheConfig sConfig;
     private static int sLocalPort = 0;
