@@ -1,6 +1,5 @@
 package com.jeffmony.videocache.m3u8;
 
-
 import android.text.TextUtils;
 
 import com.jeffmony.videocache.common.VideoCacheException;
@@ -13,10 +12,8 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.util.Map;
@@ -41,11 +38,15 @@ public class M3U8Utils {
      * @return
      * @throws IOException
      */
-    public static M3U8 parseNetworkM3U8Info(String videoUrl, Map<String, String> headers) throws IOException {
+    public static M3U8 parseNetworkM3U8Info(String videoUrl, Map<String, String> headers, int retryCount) throws IOException {
         InputStreamReader inputStreamReader = null;
         BufferedReader bufferedReader = null;
         try {
             HttpURLConnection connection = HttpUtils.getConnection(videoUrl, headers);
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpUtils.RESPONSE_503 && retryCount < HttpUtils.MAX_RETRY_COUNT) {
+                return parseNetworkM3U8Info(videoUrl, headers, retryCount + 1);
+            }
             bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 
             M3U8 m3u8 = new M3U8(videoUrl);
@@ -59,8 +60,8 @@ public class M3U8Utils {
             String method = null;
             String keyIv = null;
             String keyUrl = null;
-            float tsDuration = 0;
-            int tsIndex = 0;
+            float segDuration = 0;
+            int segIndex = 0;
 
             String line;
             while ((line = bufferedReader.readLine()) != null) {
@@ -72,7 +73,7 @@ public class M3U8Utils {
                     if (line.startsWith(Constants.TAG_MEDIA_DURATION)) {
                         String ret = parseStringAttr(line, Constants.REGEX_MEDIA_DURATION);
                         if (!TextUtils.isEmpty(ret)) {
-                            tsDuration = Float.parseFloat(ret);
+                            segDuration = Float.parseFloat(ret);
                         }
                     } else if (line.startsWith(Constants.TAG_TARGET_DURATION)) {
                         String ret = parseStringAttr(line, Constants.REGEX_TARGET_DURATION);
@@ -124,28 +125,28 @@ public class M3U8Utils {
                 // It has '#EXT-X-STREAM-INF' tag;
                 if (hasMasterList) {
                     String tempUrl = UrlUtils.getM3U8MasterUrl(videoUrl, line);
-                    return parseNetworkM3U8Info(tempUrl, headers);
+                    return parseNetworkM3U8Info(tempUrl, headers, retryCount);
                 }
 
-                if (Math.abs(tsDuration - 0.0f) < 0.0001f) {
+                if (Math.abs(segDuration) < 0.001f) {
                     continue;
                 }
 
-                M3U8Ts ts = new M3U8Ts();
+                M3U8Seg seg = new M3U8Seg();
                 String tempUrl = UrlUtils.getM3U8MasterUrl(videoUrl, line);
-                ts.setUrl(tempUrl);
-                ts.setTsIndex(tsIndex);
-                ts.setDuration(tsDuration);
-                ts.setHasDiscontinuity(hasDiscontinuity);
-                ts.setHasKey(hasKey);
+                seg.setUrl(tempUrl);
+                seg.setSegIndex(segIndex);
+                seg.setDuration(segDuration);
+                seg.setHasDiscontinuity(hasDiscontinuity);
+                seg.setHasKey(hasKey);
                 if (hasKey) {
-                    ts.setMethod(method);
-                    ts.setKeyIv(keyIv);
-                    ts.setKeyUrl(keyUrl);
+                    seg.setMethod(method);
+                    seg.setKeyIv(keyIv);
+                    seg.setKeyUrl(keyUrl);
                 }
-                m3u8.addTs(ts);
-                tsIndex++;
-                tsDuration = 0;
+                m3u8.addSeg(seg);
+                segIndex++;
+                segDuration = 0;
                 hasDiscontinuity = false;
                 hasKey = false;
                 method = null;
@@ -185,8 +186,8 @@ public class M3U8Utils {
             String method = null;
             String keyIv = null;
             String keyUrl = null;
-            float tsDuration = 0;
-            int tsIndex = 0;
+            float segDuration = 0;
+            int segIndex = 0;
 
             String line;
             while ((line = bufferedReader.readLine()) != null) {
@@ -198,7 +199,7 @@ public class M3U8Utils {
                     if (line.startsWith(Constants.TAG_MEDIA_DURATION)) {
                         String ret = parseStringAttr(line, Constants.REGEX_MEDIA_DURATION);
                         if (!TextUtils.isEmpty(ret)) {
-                            tsDuration = Float.parseFloat(ret);
+                            segDuration = Float.parseFloat(ret);
                         }
                     } else if (line.startsWith(Constants.TAG_TARGET_DURATION)) {
                         String ret = parseStringAttr(line, Constants.REGEX_TARGET_DURATION);
@@ -245,25 +246,25 @@ public class M3U8Utils {
                     continue;
                 }
 
-                if (Math.abs(tsDuration - 0.0f) < 0.0001f) {
+                if (Math.abs(segDuration) < 0.001f) {
                     continue;
                 }
 
-                M3U8Ts ts = new M3U8Ts();
+                M3U8Seg seg = new M3U8Seg();
                 String tempUrl = UrlUtils.getM3U8MasterUrl(videoUrl, line);
-                ts.setUrl(tempUrl);
-                ts.setTsIndex(tsIndex);
-                ts.setDuration(tsDuration);
-                ts.setHasDiscontinuity(hasDiscontinuity);
-                ts.setHasKey(hasKey);
+                seg.setUrl(tempUrl);
+                seg.setSegIndex(segIndex);
+                seg.setDuration(segDuration);
+                seg.setHasDiscontinuity(hasDiscontinuity);
+                seg.setHasKey(hasKey);
                 if (hasKey) {
-                    ts.setMethod(method);
-                    ts.setKeyIv(keyIv);
-                    ts.setKeyUrl(keyUrl);
+                    seg.setMethod(method);
+                    seg.setKeyIv(keyIv);
+                    seg.setKeyUrl(keyUrl);
                 }
-                m3u8.addTs(ts);
-                tsIndex++;
-                tsDuration = 0;
+                m3u8.addSeg(seg);
+                segIndex++;
+                segDuration = 0;
                 hasDiscontinuity = false;
                 hasKey = false;
                 method = null;
@@ -319,7 +320,7 @@ public class M3U8Utils {
             bfw.write(Constants.TAG_VERSION + ":" + m3u8.getVersion() + "\n");
             bfw.write(Constants.TAG_MEDIA_SEQUENCE + ":" + m3u8.getSequence() + "\n");
             bfw.write(Constants.TAG_TARGET_DURATION + ":" + m3u8.getTargetDuration() + "\n");
-            for (M3U8Ts m3u8Ts : m3u8.getTsList()) {
+            for (M3U8Seg m3u8Ts : m3u8.getSegList()) {
                 if (m3u8Ts.isHasKey() && !TextUtils.isEmpty(m3u8Ts.getMethod())) {
                     String key = "METHOD=" + m3u8Ts.getMethod();
                     if (!TextUtils.isEmpty(m3u8Ts.getKeyUrl())) {
@@ -365,7 +366,7 @@ public class M3U8Utils {
         bfw.write(Constants.TAG_MEDIA_SEQUENCE + ":" + m3u8.getSequence() + "\n");
         bfw.write(Constants.TAG_TARGET_DURATION + ":" + m3u8.getTargetDuration() + "\n");
 
-        for (M3U8Ts m3u8Ts : m3u8.getTsList()) {
+        for (M3U8Seg m3u8Ts : m3u8.getSegList()) {
             if (m3u8Ts.isHasKey() && !TextUtils.isEmpty(m3u8Ts.getMethod())) {
                 String key = "METHOD=" + m3u8Ts.getMethod();
                 if (!TextUtils.isEmpty(m3u8Ts.getKeyUrl())) {

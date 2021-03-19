@@ -2,8 +2,6 @@ package com.jeffmony.videocache.m3u8;
 
 import android.text.TextUtils;
 
-import com.jeffmony.videocache.utils.UrlUtils;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,83 +12,71 @@ import java.util.List;
  */
 public class M3U8 {
     private String mUrl;                 //M3U8的url
-    private String mBaseUrl;             //url的baseurl
-    private String mHostUrl;             //url的hosturl
     private float mTargetDuration;       //指定的duration
     private int mSequence = 0;           //序列起始值
     private int mVersion = 3;            //版本号
     private boolean mIsLive;             //是否是直播
-    private List<M3U8Ts> mTsList;        //ts 列表
+    private List<M3U8Seg> mSegList;      //分片seg 列表
 
     public M3U8(String url) {
         mUrl = url;
-        mBaseUrl = UrlUtils.getBaseUrl(url);
-        mHostUrl = UrlUtils.getHostUrl(url);
-        mTsList = new ArrayList<>();
+        mSegList = new ArrayList<>();
     }
 
     public String getUrl() {
         return mUrl;
     }
 
-    public String getBaseUrl() {
-        return mBaseUrl;
-    }
-
-    public String getHostUrl() {
-        return mHostUrl;
-    }
-
     public float getTargetDuration() {
         return mTargetDuration;
     }
 
-    public void setTargetDuration(float mTargetDuration) {
-        this.mTargetDuration = mTargetDuration;
+    public void setTargetDuration(float targetDuration) {
+        mTargetDuration = targetDuration;
     }
 
     public int getSequence() {
         return mSequence;
     }
 
-    public void setSequence(int mSequence) {
-        this.mSequence = mSequence;
+    public void setSequence(int sequence) {
+        mSequence = sequence;
     }
 
     public int getVersion() {
         return mVersion;
     }
 
-    public void setVersion(int mVersion) {
-        this.mVersion = mVersion;
+    public void setVersion(int version) {
+        mVersion = version;
     }
 
     public boolean isIsLive() {
         return mIsLive;
     }
 
-    public void setIsLive(boolean mIsLive) {
-        this.mIsLive = mIsLive;
+    public void setIsLive(boolean isLive) {
+        mIsLive = isLive;
     }
 
-    public void addTs(M3U8Ts ts) {
-        mTsList.add(ts);
+    public void addSeg(M3U8Seg ts) {
+        mSegList.add(ts);
     }
 
-    public List<M3U8Ts> getTsList() {
-        return mTsList;
+    public List<M3U8Seg> getSegList() {
+        return mSegList;
     }
 
     public long getDuration() {
         long duration = 0L;
-        for (M3U8Ts ts : mTsList) {
+        for (M3U8Seg ts : mSegList) {
             duration += ts.getDuration();
         }
         return duration;
     }
 
-    public int getTsCount() {
-        return mTsList.size();
+    public int getSegCount() {
+        return mSegList.size();
     }
 
     @Override

@@ -34,6 +34,7 @@ public class StorageUtils {
     }
 
     public static VideoCacheInfo readVideoCacheInfo(File dir) {
+        LogUtils.i(TAG, "readVideoCacheInfo : dir=" + dir.getAbsolutePath());
         File file = new File(dir, INFO_FILE);
         if (!file.exists()) {
             LogUtils.i(TAG,"readProxyCacheInfo failed, file not exist.");
@@ -49,13 +50,7 @@ public class StorageUtils {
         } catch (Exception e) {
             LogUtils.w(TAG,"readVideoCacheInfo failed, exception=" + e.getMessage());
         } finally {
-            try {
-                if (fis != null) {
-                    fis.close();
-                }
-            } catch (Exception e) {
-                LogUtils.w(TAG,"readVideoCacheInfo failed, close fis failed.");
-            }
+            ProxyCacheUtils.close(fis);
         }
         return null;
     }
@@ -71,13 +66,7 @@ public class StorageUtils {
         } catch (Exception e) {
             LogUtils.w(TAG,"saveVideoCacheInfo failed, exception=" + e.getMessage());
         } finally {
-            try {
-                if (fos != null) {
-                    fos.close();
-                }
-            } catch (Exception e) {
-                LogUtils.w(TAG,"saveVideoCacheInfo failed, close fos failed.");
-            }
+            ProxyCacheUtils.close(fos);
         }
     }
 }

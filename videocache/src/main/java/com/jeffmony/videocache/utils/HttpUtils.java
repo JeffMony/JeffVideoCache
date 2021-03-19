@@ -15,7 +15,11 @@ import java.util.Map;
 
 public class HttpUtils {
 
+    public static final int MAX_RETRY_COUNT = 100;
     private static final int MAX_REDIRECT = 5;
+    public static final int RESPONSE_200 = 200;
+    public static final int RESPONSE_206 = 206;
+    public static final int RESPONSE_503 = 503;
 
     public static HttpURLConnection getConnection(String videoUrl, Map<String, String> headers) throws IOException {
         URL url = new URL(videoUrl);

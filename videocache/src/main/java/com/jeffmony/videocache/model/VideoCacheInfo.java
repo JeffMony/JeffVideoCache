@@ -3,9 +3,9 @@ package com.jeffmony.videocache.model;
 import java.io.Serializable;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 
 public class VideoCacheInfo implements Serializable {
+    private static final long serialVersionUID = 3817171782413324662L;
     private String mVideoUrl;                      //视频的url
     private int mVideoType;                        //视频类型
     private long mCachedSize;                      //已经缓存的大小，M3U8文件忽略这个变量
@@ -112,19 +112,6 @@ public class VideoCacheInfo implements Serializable {
 
     public LinkedHashMap<Long, Long> getVideoSegMap() {
         return mVideoSegMap;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof VideoCacheInfo)) return false;
-        VideoCacheInfo cacheInfo = (VideoCacheInfo) o;
-        return mVideoUrl.equals(cacheInfo.mVideoUrl);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(mVideoUrl);
     }
 
     public String toString() {

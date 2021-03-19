@@ -116,14 +116,14 @@ public class VideoInfoParseManager {
     private void parseNetworkM3U8Info(VideoCacheInfo cacheInfo) {
 
         try {
-            M3U8 m3u8 = M3U8Utils.parseNetworkM3U8Info(cacheInfo.getVideoUrl(), mHeaders);
+            M3U8 m3u8 = M3U8Utils.parseNetworkM3U8Info(cacheInfo.getVideoUrl(), mHeaders, 0);
 
             if (m3u8.isIsLive()) {
                 //说明M3U8是直播
                 mListener.onM3U8LiveCallback(cacheInfo);
             } else {
                 cacheInfo.setVideoType(VideoType.M3U8_TYPE);
-                cacheInfo.setTotalTs(m3u8.getTsCount());
+                cacheInfo.setTotalTs(m3u8.getSegCount());
                 // 1.将M3U8结构保存到本地
                 VideoProxyThreadUtils.submitRunnableTask(() -> {
                     File localM3U8File = new File(cacheInfo.getSavePath(), cacheInfo.getMd5() + StorageUtils.LOCAL_M3U8_SUFFIX);
@@ -165,7 +165,7 @@ public class VideoInfoParseManager {
                     File localM3U8File = new File(cacheInfo.getSavePath(), cacheInfo.getMd5() + StorageUtils.LOCAL_M3U8_SUFFIX);
                     try {
                         M3U8 m3u8 = M3U8Utils.parseLocalM3U8Info(localM3U8File, cacheInfo.getVideoUrl());
-                        cacheInfo.setTotalTs(m3u8.getTsCount());
+                        cacheInfo.setTotalTs(m3u8.getSegCount());
                         mListener.onM3U8ParsedFinished(m3u8, cacheInfo);
                     } catch (Exception e) {
                         mListener.onM3U8ParsedFailed(new VideoCacheException("parseLocalM3U8Info failed"), cacheInfo);
