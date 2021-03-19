@@ -20,6 +20,10 @@ public class UrlUtils {
         }
         String baseUriPath = getBaseUrl(videoUrl);
         String hostUrl = getHostUrl(videoUrl);
+        if (line.startsWith("//")) {
+            String tempUrl = getSchema(videoUrl) + ":" + line;
+            return tempUrl;
+        }
         if (line.startsWith("/")) {
             String pathStr = getPathStr(videoUrl);
             String longestCommonPrefixStr = getLongestCommonPrefixStr(pathStr, line);
@@ -33,6 +37,18 @@ public class UrlUtils {
             return line;
         }
         return baseUriPath + line;
+    }
+
+    private static String getSchema(String url) {
+        if (TextUtils.isEmpty(url)) {
+            return "";
+        }
+        int index = url.indexOf("://");
+        if (index != -1) {
+            String result = url.substring(0, index);
+            return result;
+        }
+        return "";
     }
 
     /**
