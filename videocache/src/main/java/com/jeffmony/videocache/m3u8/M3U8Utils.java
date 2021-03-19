@@ -430,8 +430,10 @@ public class M3U8Utils {
                             if (sOldPort == 0) {
                                 sOldPort = ProxyCacheUtils.getPortFromProxyUrl(line);
                                 if (sOldPort == 0) {
+                                    tempM3U8File.delete();
                                     return false;
                                 } else if (sOldPort == proxyPort) {
+                                    tempM3U8File.delete();
                                     return true;
                                 }
                             }

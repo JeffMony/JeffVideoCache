@@ -45,7 +45,6 @@ public class M3U8CacheTask extends VideoCacheTask {
         if (mSegLengthMap == null) {
             mSegLengthMap = new HashMap<>();
         }
-
         mHeaders.put("Connection", "close");
     }
 
