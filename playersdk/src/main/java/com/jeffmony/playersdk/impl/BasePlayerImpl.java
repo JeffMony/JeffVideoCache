@@ -61,6 +61,8 @@ public abstract class BasePlayerImpl {
 
     public abstract long getDuration();
 
+    public abstract boolean isPlaying();
+
     public abstract void reset();
 
     public abstract void release();

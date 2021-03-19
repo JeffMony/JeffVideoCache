@@ -85,6 +85,11 @@ public class JeffPlayer implements IPlayer {
     }
 
     @Override
+    public boolean isPlaying() {
+        return mPlayerImpl.isPlaying();
+    }
+
+    @Override
     public void reset() {
         mPlayerImpl.reset();
     }

@@ -32,7 +32,6 @@ public class IjkPlayerImpl extends BasePlayerImpl {
         mIjkPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_FORMAT, "reconnect", 1);
         mIjkPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_CODEC, "skip_loop_filter", 16);
         mIjkPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-
         initPlayerListeners();
     }
 
@@ -90,6 +89,11 @@ public class IjkPlayerImpl extends BasePlayerImpl {
     @Override
     public long getDuration() {
         return mIjkPlayer.getDuration();
+    }
+
+    @Override
+    public boolean isPlaying() {
+        return mIjkPlayer.isPlaying();
     }
 
     @Override

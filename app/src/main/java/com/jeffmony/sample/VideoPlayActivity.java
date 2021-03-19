@@ -9,6 +9,7 @@ import android.os.Message;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -43,6 +44,8 @@ public class VideoPlayActivity extends Activity {
     private TextureView mVideoView;
     private SeekBar mProgressView;
     private TextView mTimeView;
+    private ImageButton mVideoStatusBtn;
+    private VideoStatus mVideoStatus;
 
     private final Handler mHandler = new Handler() {
         @Override
@@ -68,9 +71,11 @@ public class VideoPlayActivity extends Activity {
         mVideoView = findViewById(R.id.video_textureview);
         mProgressView = findViewById(R.id.video_progress_view);
         mTimeView = findViewById(R.id.video_time_view);
+        mVideoStatusBtn = findViewById(R.id.video_status_btn);
 
         mVideoView.setSurfaceTextureListener(mTextureListener);
         mProgressView.setOnSeekBarChangeListener(mOnSeekBarChangeListener);
+        mVideoStatusBtn.setOnClickListener(mOnClickListener);
     }
 
     private TextureView.SurfaceTextureListener mTextureListener = new TextureView.SurfaceTextureListener() {
@@ -81,9 +86,7 @@ public class VideoPlayActivity extends Activity {
         }
 
         @Override
-        public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surfaceTexture, int i, int i1) {
-
-        }
+        public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surfaceTexture, int i, int i1) { }
 
         @Override
         public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surfaceTexture) {
@@ -91,9 +94,7 @@ public class VideoPlayActivity extends Activity {
         }
 
         @Override
-        public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surfaceTexture) {
-
-        }
+        public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surfaceTexture) { }
     };
 
     private void initPlayerSettings() {
@@ -117,9 +118,7 @@ public class VideoPlayActivity extends Activity {
 
     private SeekBar.OnSeekBarChangeListener mOnSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener() {
         @Override
-        public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-
-        }
+        public void onProgressChanged(SeekBar seekBar, int i, boolean b) { }
 
         @Override
         public void onStartTrackingTouch(SeekBar seekBar) {
@@ -148,6 +147,8 @@ public class VideoPlayActivity extends Activity {
         public void onPrepared() {
             mHandler.sendEmptyMessage(MSG_UPDATE_VIDEOTIME);
             mPlayer.start();
+
+            updatePlayerBtn();
         }
     };
 
@@ -159,6 +160,17 @@ public class VideoPlayActivity extends Activity {
             mVideoHeight = height;
             mHandler.sendEmptyMessage(MSG_UPDATE_VIDEOSIZE);
         }
+    };
+
+    private View.OnClickListener mOnClickListener = view -> {
+        if (mVideoStatus == VideoStatus.PLAY) {
+            mPlayer.pause();
+            mHandler.removeMessages(MSG_UPDATE_VIDEOTIME);
+        } else {
+            mPlayer.start();
+            mHandler.sendEmptyMessage(MSG_UPDATE_VIDEOTIME);
+        }
+        updatePlayerBtn();
     };
 
     private void updateVideoSurfaceSize(int width, int height) {
@@ -186,6 +198,19 @@ public class VideoPlayActivity extends Activity {
         }
         mHandler.removeMessages(MSG_UPDATE_VIDEOTIME);
         mHandler.sendEmptyMessageDelayed(MSG_UPDATE_VIDEOTIME, 1000);
+    }
+
+    private void updatePlayerBtn() {
+        if (mVideoStatusBtn.getVisibility() == View.GONE) {
+            mVideoStatusBtn.setVisibility(View.VISIBLE);
+        }
+        if (mPlayer.isPlaying()) {
+            mVideoStatusBtn.setBackgroundResource(R.drawable.pause_icon);
+            mVideoStatus = VideoStatus.PLAY;
+        } else {
+            mVideoStatusBtn.setBackgroundResource(R.drawable.play_icon);
+            mVideoStatus = VideoStatus.PAUSE;
+        }
     }
 
     private void removeHandlerMsg() {

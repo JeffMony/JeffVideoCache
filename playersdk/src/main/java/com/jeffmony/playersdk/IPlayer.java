@@ -34,6 +34,8 @@ public interface IPlayer {
 
     long getDuration();
 
+    boolean isPlaying();
+
     void reset();
 
     void release();

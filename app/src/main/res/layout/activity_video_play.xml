@@ -33,6 +33,15 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
 
+        <ImageButton
+            android:id="@+id/video_status_btn"
+            android:layout_marginTop="10dp"
+            android:visibility="gone"
+            android:background="@drawable/play_icon"
+            android:layout_gravity="center"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
     </LinearLayout>
 
 </RelativeLayout>

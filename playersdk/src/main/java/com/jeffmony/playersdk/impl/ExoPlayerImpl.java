@@ -116,6 +116,11 @@ public class ExoPlayerImpl extends BasePlayerImpl {
     }
 
     @Override
+    public boolean isPlaying() {
+        return mExoPlayer.isPlaying();
+    }
+
+    @Override
     public void reset() {
         mExoPlayer.stop();
     }
@@ -124,7 +129,9 @@ public class ExoPlayerImpl extends BasePlayerImpl {
     public void release() {
         mExoPlayer.removeVideoListener(mVideoListener);
         mExoPlayer.removeListener(mEventListener);
-        mLocalProxyVideoControl.releaseLocalProxyResources();
+        if (mPlayerSettings.getLocalProxyEnable()) {
+            mLocalProxyVideoControl.releaseLocalProxyResources();
+        }
         mExoPlayer.release();
     }
 
