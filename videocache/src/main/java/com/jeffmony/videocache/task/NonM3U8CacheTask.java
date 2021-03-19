@@ -136,14 +136,26 @@ public class NonM3U8CacheTask extends VideoCacheTask {
 
     @Override
     public void pauseCacheTask() {
+        LogUtils.i(TAG, "pauseCacheTask");
         if (isTaskRunning()) {
             mTaskExecutor.shutdownNow();
+        }
+
+        //暂停之后还是需要将当前的range数据保存起来
+        if (!mCacheInfo.isCompleted() && mRequestRange != null) {
+            long tempRangeStart = mRequestRange.getStart();
+            long tempRangeEnd = mCachedSize;
+            mRequestRange = new VideoRange(tempRangeStart, tempRangeEnd);
+            updateVideoRangeInfo();
         }
     }
 
     @Override
     public void stopCacheTask() {
-        pauseCacheTask();
+        LogUtils.i(TAG, "stopCacheTask");
+        if (isTaskRunning()) {
+            mTaskExecutor.shutdownNow();
+        }
         if (!mCacheInfo.isCompleted() && mRequestRange != null) {
             long tempRangeStart = mRequestRange.getStart();
             long tempRangeEnd = mCachedSize;
@@ -155,6 +167,9 @@ public class NonM3U8CacheTask extends VideoCacheTask {
     @Override
     public void resumeCacheTask() {
         LogUtils.i(TAG, "resumeCacheTask");
+        if (isTaskShutdown()) {
+            startRequestVideoRange(0L);   //传入一个起始位置,需要到已缓存的文件中去查找一下
+        }
     }
 
     @Override
