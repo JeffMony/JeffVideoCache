@@ -232,4 +232,12 @@ public class ProxyCacheUtils {
         return false;
     }
 
+    public static String getSuffixName(String name) {
+        if (TextUtils.isEmpty(name)) {
+            return "";
+        }
+        int dotIndex = name.lastIndexOf('.');
+        return (dotIndex >= 0 && dotIndex < name.length()) ? name.substring(dotIndex) : "";
+    }
+
 }

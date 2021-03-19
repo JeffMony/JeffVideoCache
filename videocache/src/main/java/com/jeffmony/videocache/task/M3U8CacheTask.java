@@ -64,7 +64,7 @@ public class M3U8CacheTask extends VideoCacheTask {
         int tempCachedTs = 0;
         for (int index = 0; index < mSegList.size(); index++) {
             M3U8Seg ts = mSegList.get(index);
-            File tempTsFile = new File(mSaveDir, ts.getTsName());
+            File tempTsFile = new File(mSaveDir, ts.getSegName());
             if (tempTsFile.exists() && tempTsFile.length() > 0) {
                 ts.setFileSize(tempTsFile.length());
                 mSegLengthMap.put(index, tempTsFile.length());
@@ -127,20 +127,20 @@ public class M3U8CacheTask extends VideoCacheTask {
         }
     }
 
-    private void startDownloadSegTask(M3U8Seg seg, int tsIndex) throws Exception {
-        String tsName = tsIndex + StorageUtils.TS_SUFFIX;
-        File tsFile = new File(mSaveDir, tsName);
-        if (!tsFile.exists()) {
+    private void startDownloadSegTask(M3U8Seg seg, int segIndex) throws Exception {
+        String segName = seg.getSegName();
+        File segFile = new File(mSaveDir, segName);
+        if (!segFile.exists()) {
             // ts is network resource, download ts file then rename it to local file.
-            downloadSegFile(seg, tsFile);
+            downloadSegFile(seg, segFile);
         }
 
         //确保当前文件下载完整
-        if (tsFile.exists() && tsFile.length() == seg.getContentLength()) {
+        if (segFile.exists() && segFile.length() == seg.getContentLength()) {
             //只有这样的情况下才能保证当前的ts文件真正被下载下来了
-            mSegLengthMap.put(tsIndex, tsFile.length());
-            seg.setName(tsName);
-            seg.setFileSize(tsFile.length());
+            mSegLengthMap.put(segIndex, segFile.length());
+            seg.setName(segName);
+            seg.setFileSize(segFile.length());
             //更新进度
             notifyCacheProgress();
         }
@@ -240,7 +240,7 @@ public class M3U8CacheTask extends VideoCacheTask {
 
         boolean isCompleted = true;
         for (M3U8Seg ts : mSegList) {
-            File tsFile = new File(mSaveDir, ts.getTsName());
+            File tsFile = new File(mSaveDir, ts.getSegName());
             if (!tsFile.exists()) {
                 isCompleted = false;
                 break;
@@ -260,7 +260,7 @@ public class M3U8CacheTask extends VideoCacheTask {
         int tempCachedTs = 0;
         for (int index = 0; index < mSegList.size(); index++) {
             M3U8Seg ts = mSegList.get(index);
-            File tempTsFile = new File(mSaveDir, ts.getTsName());
+            File tempTsFile = new File(mSaveDir, ts.getSegName());
             if (tempTsFile.exists() && tempTsFile.length() > 0) {
                 ts.setFileSize(tempTsFile.length());
                 mSegLengthMap.put(index, tempTsFile.length());

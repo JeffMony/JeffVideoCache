@@ -1,7 +1,9 @@
 package com.jeffmony.videocache.m3u8;
 
+import android.net.Uri;
+import android.text.TextUtils;
+
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
-import com.jeffmony.videocache.utils.StorageUtils;
 
 import java.io.File;
 import java.util.Locale;
@@ -114,8 +116,17 @@ public class M3U8Seg implements Comparable<M3U8Seg> {
         mKeyIv = keyIv;
     }
 
-    public String getTsName() {
-        return mSegIndex + StorageUtils.TS_SUFFIX;
+    public String getSegName() {
+        String suffixName = "";
+        if (!TextUtils.isEmpty(mUrl)) {
+            Uri uri = Uri.parse(mUrl);
+            String fileName = uri.getLastPathSegment();
+            if (!TextUtils.isEmpty(fileName)) {
+                fileName = fileName.toLowerCase();
+                suffixName = ProxyCacheUtils.getSuffixName(fileName);
+            }
+        }
+        return mSegIndex + suffixName;
     }
 
     public void setRetryCount(int retryCount) { mRetryCount = retryCount; }
@@ -138,7 +149,7 @@ public class M3U8Seg implements Comparable<M3U8Seg> {
         //2.ts存储的位置
         //3.ts url对应的请求headers
         String proxyExtraInfo = mUrl + ProxyCacheUtils.TS_PROXY_SPLIT_STR +
-                File.separator + md5 + File.separator + mSegIndex + StorageUtils.TS_SUFFIX +
+                File.separator + md5 + File.separator + getSegName() +
                 ProxyCacheUtils.TS_PROXY_SPLIT_STR + ProxyCacheUtils.map2Str(headers);
         String proxyUrl = String.format(Locale.US, "http://%s:%d/%s", ProxyCacheUtils.LOCAL_PROXY_HOST,
                 ProxyCacheUtils.getLocalPort(), ProxyCacheUtils.encodeUriWithBase64(proxyExtraInfo));
