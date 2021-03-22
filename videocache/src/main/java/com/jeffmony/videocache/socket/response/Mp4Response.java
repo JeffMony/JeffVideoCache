@@ -68,7 +68,7 @@ public class Mp4Response extends BaseResponse {
         }
         Object lock = VideoLockManager.getInstance().getLock(mMd5);
         int waitTime = WAIT_TIME;
-        long totalSize = VideoProxyCacheManager.getInstance().getTotalSizeByMd5(mMd5);
+        long totalSize = VideoProxyCacheManager.getInstance().getTotalSize(mMd5);
         while (!mFile.exists() && totalSize <= 0) {
             synchronized (lock) {
                 lock.wait(waitTime);

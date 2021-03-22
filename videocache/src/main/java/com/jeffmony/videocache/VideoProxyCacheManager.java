@@ -570,7 +570,7 @@ public class VideoProxyCacheManager {
         return false;
     }
 
-    public long getTotalSizeByMd5(String md5) {
+    public long getTotalSize(String md5) {
         if (TextUtils.isEmpty(md5)) {
             return -1L;
         }
