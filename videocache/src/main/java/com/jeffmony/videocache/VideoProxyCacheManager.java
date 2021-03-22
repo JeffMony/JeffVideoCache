@@ -172,6 +172,13 @@ public class VideoProxyCacheManager {
         mCacheListenerMap.remove(videoUrl);
     }
 
+    public void releaseProxyReleases(String videoUrl) {
+        removeCacheListener(videoUrl);
+        String md5 = ProxyCacheUtils.computeMD5(videoUrl);
+        releaseProxyCacheSet(md5);
+        removeVideoSeekInfo(md5);
+    }
+
     /**
      *
      * @param videoUrl  视频url
@@ -315,7 +322,7 @@ public class VideoProxyCacheManager {
 
             @Override
             public void onTaskProgress(float percent, long cachedSize, float speed) {
-                if (shouldNotifyLock(cacheInfo.getVideoUrl(), cacheInfo.getMd5())) {
+                if (shouldNotifyLock(cacheInfo.getVideoType(), cacheInfo.getVideoUrl(), cacheInfo.getMd5())) {
                     notifyLocalProxyLock(lock);
                 }
                 cacheInfo.setPercent(percent);
@@ -344,7 +351,9 @@ public class VideoProxyCacheManager {
 
             @Override
             public void onTaskCompleted(long totalSize) {
-                notifyLocalProxyLock(lock);
+                if (shouldNotifyLock(cacheInfo.getVideoType(), cacheInfo.getVideoUrl(), cacheInfo.getMd5())) {
+                    notifyLocalProxyLock(lock);
+                }
                 cacheInfo.setTotalSize(totalSize);
                 mCacheInfoMap.put(cacheInfo.getVideoUrl(), cacheInfo);
                 mProxyHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_COMPLETED, cacheInfo).sendToTarget();
@@ -401,19 +410,23 @@ public class VideoProxyCacheManager {
 
     private void addVideoSeekInfo(String url) {
         String md5 = ProxyCacheUtils.computeMD5(url);
-        LogUtils.i(TAG, "addVideoSeekSet = " + md5);
+        LogUtils.i(TAG, "addVideoSeekInfo md5=" + md5+", url="+url);
         mVideoSeekMd5PositionMap.put(md5, -1L);
     }
 
-    private boolean shouldNotifyLock(String url, String md5) {
-        long position = mVideoSeekMd5PositionMap.containsKey(md5) ? mVideoSeekMd5PositionMap.get(md5) : -1L;
-        if (position > 0) {
-            boolean isMp4PositionSegExisted = isMp4PositionSegExisted(url, position);
-            LogUtils.d(TAG, "shouldNotifyLock position = " + position + ", isMp4PositionSegExisted="+isMp4PositionSegExisted);
-            if (isMp4PositionSegExisted) {
-                removeVideoSeekInfo(md5);
+    private boolean shouldNotifyLock(int videoType, String url, String md5) {
+        //只有非M3U8视频才能进入这个逻辑
+        if (videoType == VideoType.OTHER_TYPE && mVideoSeekMd5PositionMap.containsKey(md5)) {
+            long position = mVideoSeekMd5PositionMap.get(md5).longValue();
+            if (position > 0) {
+                boolean isMp4PositionSegExisted = isMp4PositionSegExisted(url, position);
+                LogUtils.i(TAG, "shouldNotifyLock position = " + position + ", isMp4PositionSegExisted="+isMp4PositionSegExisted);
+                if (isMp4PositionSegExisted) {
+                    removeVideoSeekInfo(md5);
+                }
             }
-            return isMp4PositionSegExisted;
+            //说明发生了seek, 但是seek请求并没有结束
+            return false;
         }
         return true;
     }
@@ -435,6 +448,7 @@ public class VideoProxyCacheManager {
         long oldPosition = mVideoSeekMd5PositionMap.containsKey(md5) ? mVideoSeekMd5PositionMap.get(md5) : -1L;
         //说明这是一个新的seek操作
         if (oldPosition == -1L) {
+            LogUtils.i(TAG, "setVideoRangeRequest startPosition="+startPosition);
             mVideoSeekMd5PositionMap.put(md5, startPosition);
             VideoCacheTask cacheTask = mCacheTaskMap.get(url);
             if (cacheTask != null) {

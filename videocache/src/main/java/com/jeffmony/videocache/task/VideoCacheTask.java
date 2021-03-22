@@ -19,8 +19,8 @@ public abstract class VideoCacheTask {
     protected IVideoCacheTaskListener mListener;
     protected ThreadPoolExecutor mTaskExecutor;
 
-    protected long mCachedSize;      //当前缓存大小
-    protected long mLastCachedSize;  //上一次缓存大小
+    protected volatile long mCachedSize;      //当前缓存大小
+    protected volatile long mLastCachedSize;  //上一次缓存大小
     protected long mTotalSize;
     protected long mLastInvokeTime;
     protected float mPercent = 0.0f;
@@ -79,10 +79,11 @@ public abstract class VideoCacheTask {
 
     /**
      * 非M3U8视频专用的接口
+     * 核心逻辑在NonM3U8CacheTask.java
      * @param startPosition
      * @return
      */
-    public boolean isMp4PositionSegExisted(long startPosition) { return false; }
+    public boolean isMp4PositionSegExisted(long startPosition) { return true; }
 
     protected void setThreadPoolArgument(int corePoolSize, int maxPoolSize) {
         if (isTaskRunning()) {

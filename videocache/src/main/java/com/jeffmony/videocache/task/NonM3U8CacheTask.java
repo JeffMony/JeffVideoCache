@@ -167,8 +167,8 @@ public class NonM3U8CacheTask extends VideoCacheTask {
     @Override
     public void resumeCacheTask() {
         LogUtils.i(TAG, "resumeCacheTask");
-        if (isTaskShutdown()) {
-            startRequestVideoRange(0L);   //传入一个起始位置,需要到已缓存的文件中去查找一下
+        if (isTaskShutdown() && mCachedSize < mTotalSize) {
+            startRequestVideoRange(mCachedSize);   //传入一个起始位置,需要到已缓存的文件中去查找一下
         }
     }
 
@@ -181,7 +181,7 @@ public class NonM3U8CacheTask extends VideoCacheTask {
     @Override
     public void seekToCacheTask(long startPosition) {
         //真正的拖动进度条, 这儿要真正构建新的range请求
-        boolean shouldSeekToCacheTask = !isMp4PositionSegExisted(startPosition);
+        boolean shouldSeekToCacheTask = shouldSeekToCacheTask(startPosition);
         LogUtils.i(TAG, "seekToCacheTask ====> shouldSeekToCacheTask="+shouldSeekToCacheTask+", startPosition="+startPosition);
         if (shouldSeekToCacheTask) {
             pauseCacheTask();
@@ -189,8 +189,37 @@ public class NonM3U8CacheTask extends VideoCacheTask {
         }
     }
 
+    /**
+     * true   ====>  表示重新发起请求
+     * false  ====>  表示没有必要重新发起请求
+     *
+     * @param startPosition
+     * @return
+     */
+    private boolean shouldSeekToCacheTask(long startPosition) {
+
+        //当前文件下载完成, 不需要执行range request请求
+        if (mCacheInfo.isCompleted()) {
+            return false;
+        }
+        if (mRequestRange != null) {
+            boolean result = mRequestRange.getStart() <= startPosition && startPosition < mRequestRange.getEnd();
+            if (result) {
+                //当前拖动到的位置已经在request range中了, 没有必要重新发起请求了
+                if (mCachedSize >= startPosition) {
+                    return false;
+                }
+                return true;
+            }
+        }
+        return true;
+    }
+
     @Override
     public boolean isMp4PositionSegExisted(long startPosition) {
+        if (mCacheInfo.isCompleted()) {
+            return true;
+        }
         if (mVideoSegMap != null) {
             for(Map.Entry entry : mVideoSegMap.entrySet()) {
                 long start = (long)entry.getKey();
@@ -242,7 +271,8 @@ public class NonM3U8CacheTask extends VideoCacheTask {
                 randomAccessFile = new RandomAccessFile(videoFile.getAbsolutePath(), "rw");
                 randomAccessFile.seek(requestStart);
 
-                LogUtils.i(TAG, "Start request : " + mRequestRange);
+                mCachedSize = requestStart;
+                LogUtils.i(TAG, "Start request : " + mRequestRange + ", CurrentCachedSize="+mCachedSize);
                 connection = HttpUtils.getConnection(mVideoUrl, mHeaders);
                 inputStream = connection.getInputStream();
                 LogUtils.i(TAG, "Receive response");
@@ -250,12 +280,12 @@ public class NonM3U8CacheTask extends VideoCacheTask {
                 byte[] buffer = new byte[StorageUtils.DEFAULT_BUFFER_SIZE];
                 int readLength;
                 while((readLength = inputStream.read(buffer)) != -1) {
-                    if (mCachedSize > requestEnd) {
+                    if (mCachedSize >= requestEnd) {
                         mCachedSize = requestEnd;
                     }
                     if (mCachedSize + readLength > requestEnd) {
-                        randomAccessFile.write(buffer, 0, (int)(requestEnd- mCachedSize));
-                        mCachedSize += (requestEnd - mCachedSize);
+                        long read = requestEnd - mCachedSize;
+                        randomAccessFile.write(buffer, 0, (int)read);
                         mCachedSize = requestEnd;
                     } else {
                         randomAccessFile.write(buffer, 0, readLength);
