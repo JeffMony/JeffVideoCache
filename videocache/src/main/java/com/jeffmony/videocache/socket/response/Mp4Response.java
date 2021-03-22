@@ -35,7 +35,7 @@ public class Mp4Response extends BaseResponse {
         mResponseState = ResponseState.OK;
         String rangeStr = request.getRangeString();
         mStartPosition = getRequestStartPosition(rangeStr);
-        LogUtils.i(TAG, "Range header=" + request.getRangeString() + ", start position="+mStartPosition);
+        LogUtils.i(TAG, "Range header=" + request.getRangeString() + ", start position="+mStartPosition +", instance="+this);
         if (mStartPosition != -1) {
             //服务端将range起始位置设置到客户端
             VideoProxyCacheManager.getInstance().setVideoRangeRequest(videoUrl, mStartPosition);
@@ -81,7 +81,7 @@ public class Mp4Response extends BaseResponse {
             }
             isPositionSegExisted = VideoProxyCacheManager.getInstance().isMp4PositionSegExisted(mVideoUrl, mStartPosition);
         }
-        LogUtils.i(TAG, "Current VideoFile exists : " + mFile.exists() + ", this=" + this);
+        LogUtils.i(TAG, "Current VideoFile exists : " + mFile.exists() + ", File length=" + mFile.length()+", instance=" + this);
         RandomAccessFile randomAccessFile = null;
         try {
             randomAccessFile = new RandomAccessFile(mFile, "r");
@@ -92,8 +92,10 @@ public class Mp4Response extends BaseResponse {
             int bufferedSize = StorageUtils.DEFAULT_BUFFER_SIZE;
             byte[] buffer = new byte[bufferedSize];
             long offset = 0;
-            if (totalSize == available) {
-                LogUtils.i(TAG, "Current VideoFile is okay");
+
+            //说明mp4文件下载完成了
+            if (totalSize == available && VideoProxyCacheManager.getInstance().isMp4Completed(mVideoUrl)) {
+                LogUtils.i(TAG, "Current VideoFile is okay, instance="+this);
                 randomAccessFile.seek(offset);
                 int readLength;
                 while((readLength = randomAccessFile.read(buffer, 0, buffer.length)) != -1) {
@@ -102,6 +104,7 @@ public class Mp4Response extends BaseResponse {
                     randomAccessFile.seek(offset);
                 }
             } else {
+                //mp4文件没有下载完成
                 while(shouldSendResponse(socket, mMd5)) {
                     if (available == 0) {
                         synchronized (lock) {
@@ -113,44 +116,39 @@ public class Mp4Response extends BaseResponse {
                             waitTime *= 2;
                         }
                     } else {
+                        //randomAccessFile seek到具体的offset
                         randomAccessFile.seek(offset);
-                        int readLength;
-                        while((readLength = randomAccessFile.read(buffer, 0, buffer.length)) != -1) {
+                        int readLength = 0;
+                        //接下来要写入到socket中, 一定要判断randomAccessFile中是否有数据可以写
+                        boolean shouldWriteResponseData = VideoProxyCacheManager.getInstance().shouldWriteResponseData(mVideoUrl, offset);
+                        while (shouldWriteResponseData && ((readLength = randomAccessFile.read(buffer, 0, buffer.length)) != -1)) {
                             offset += readLength;
                             outputStream.write(buffer, 0, readLength);
                             randomAccessFile.seek(offset);
+                            shouldWriteResponseData = VideoProxyCacheManager.getInstance().shouldWriteResponseData(mVideoUrl, offset);
+                            LogUtils.d(TAG, "shouldWriteResponseData="+shouldWriteResponseData+", offset="+offset+", readLength="+readLength+", instance="+this);
                         }
 
-                        if (offset == totalSize) {
-                            LogUtils.i(TAG, "Send video info end, this="+this);
+                        if (offset == totalSize && VideoProxyCacheManager.getInstance().isMp4Completed(mVideoUrl)) {
+                            LogUtils.i(TAG, "Video file is cached in local storage. instance="+this);
                             break;
                         }
-
-                        if (offset < available) {
-                            continue;
-                        }
-
-                        long lastAvailable = available;
-                        available = randomAccessFile.length();
                         waitTime = WAIT_TIME;
-                        while(available - lastAvailable < bufferedSize && shouldSendResponse(socket, mMd5)) {
-                            if (available == totalSize) {
-                                LogUtils.i(TAG, "Send video info end, this="+this);
-                                break;
-                            }
-
+                        while(!shouldWriteResponseData && readLength == -1) {
                             synchronized (lock) {
-                                lock.wait(getDelayTime(waitTime));
+                                waitTime = getDelayTime(waitTime);
+                                lock.wait(waitTime);
                             }
-                            available = randomAccessFile.length();
+                            shouldWriteResponseData = VideoProxyCacheManager.getInstance().shouldWriteResponseData(mVideoUrl, offset);
                             if (waitTime < MAX_WAIT_TIME) {
                                 waitTime *= 2;
                             }
                         }
+                        available = randomAccessFile.length();
                     }
                 }
             }
-            LogUtils.i(TAG, "Send video info end, this="+this);
+            LogUtils.i(TAG, "Send video info end, instance="+this);
         } catch (Exception e) {
             LogUtils.w(TAG, "Send video info failed, exception="+e+", this="+this);
             throw e;

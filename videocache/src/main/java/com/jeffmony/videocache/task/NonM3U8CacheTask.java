@@ -37,6 +37,7 @@ public class NonM3U8CacheTask extends VideoCacheTask {
 
     private static final String TAG = "NonM3U8CacheTask";
 
+    private final Object mSegMapLock = new Object();
     private LinkedHashMap<Long, Long> mVideoSegMap;    //本地序列化的range结构
     private LinkedHashMap<Long, VideoRange> mVideoRangeMap;    //已经缓存的video range结构
     private VideoRange mRequestRange;    //当前请求的video range
@@ -216,18 +217,25 @@ public class NonM3U8CacheTask extends VideoCacheTask {
     }
 
     @Override
+    public boolean isMp4Completed() {
+        return mCacheInfo.isCompleted();
+    }
+
+    @Override
     public boolean isMp4PositionSegExisted(long startPosition) {
         if (mCacheInfo.isCompleted()) {
             return true;
         }
-        if (mVideoSegMap != null) {
-            for(Map.Entry entry : mVideoSegMap.entrySet()) {
-                long start = (long)entry.getKey();
-                long end = (long)entry.getValue();
+        synchronized (mSegMapLock) {
+            if (mVideoSegMap != null) {
+                for (Map.Entry entry : mVideoSegMap.entrySet()) {
+                    long start = (long) entry.getKey();
+                    long end = (long) entry.getValue();
 
-                //只有这样,才能说明当前的startPosition处于一个VideoRange范围内
-                if (start <=startPosition && startPosition < end) {
-                    return true;
+                    //只有这样,才能说明当前的startPosition处于一个VideoRange范围内
+                    if (start <= startPosition && startPosition < end) {
+                        return true;
+                    }
                 }
             }
         }
@@ -409,8 +417,10 @@ public class NonM3U8CacheTask extends VideoCacheTask {
             LogUtils.i(TAG, "updateVideoRangeInfo--->Result videoRange : " + videoRange);
             tempSegMap.put(videoRange.getStart(), videoRange.getEnd());
         }
-        mVideoSegMap.clear();
-        mVideoSegMap.putAll(tempSegMap);
+        synchronized (mSegMapLock) {
+            mVideoSegMap.clear();
+            mVideoSegMap.putAll(tempSegMap);
+        }
         mCacheInfo.setVideoSegMap(mVideoSegMap);
 
         if (mVideoRangeMap.size() == 1) {

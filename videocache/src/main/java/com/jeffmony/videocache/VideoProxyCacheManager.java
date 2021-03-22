@@ -418,15 +418,21 @@ public class VideoProxyCacheManager {
         //只有非M3U8视频才能进入这个逻辑
         if (videoType == VideoType.OTHER_TYPE && mVideoSeekMd5PositionMap.containsKey(md5)) {
             long position = mVideoSeekMd5PositionMap.get(md5).longValue();
+            LogUtils.i(TAG, "shouldNotifyLock position=" + position+", url="+url);
             if (position > 0) {
                 boolean isMp4PositionSegExisted = isMp4PositionSegExisted(url, position);
-                LogUtils.i(TAG, "shouldNotifyLock position = " + position + ", isMp4PositionSegExisted="+isMp4PositionSegExisted);
+                LogUtils.i(TAG, "shouldNotifyLock position=" + position + ", isMp4PositionSegExisted="+isMp4PositionSegExisted);
                 if (isMp4PositionSegExisted) {
-                    removeVideoSeekInfo(md5);
+                    mVideoSeekMd5PositionMap.remove(md5);
+                    return true;
+                } else {
+                    //说明发生了seek, 但是seek请求并没有结束
+                    return false;
                 }
+            } else {
+                //说明次数有seek操作,但是seek操作还没有从local server端发送过来
+                return false;
             }
-            //说明发生了seek, 但是seek请求并没有结束
-            return false;
         }
         return true;
     }
@@ -473,6 +479,33 @@ public class VideoProxyCacheManager {
             return cacheTask.isMp4PositionSegExisted(startPosition);
         }
         return true;
+    }
+
+    /**
+     * 当前MP4文件是否下载完全
+     * @param url
+     * @return
+     */
+    public boolean isMp4Completed(String url) {
+        VideoCacheTask cacheTask = mCacheTaskMap.get(url);
+        if (cacheTask != null) {
+            return cacheTask.isMp4Completed();
+        }
+        return false;
+    }
+
+    /**
+     * 当前position数据是否可以write到socket中
+     * @param url
+     * @param position
+     * @return
+     */
+    public boolean shouldWriteResponseData(String url, long position) {
+        VideoCacheTask cacheTask = mCacheTaskMap.get(url);
+        if (cacheTask != null) {
+            return cacheTask.isMp4PositionSegExisted(position);
+        }
+        return false;
     }
 
     private void notifyLocalProxyLock(Object lock) {

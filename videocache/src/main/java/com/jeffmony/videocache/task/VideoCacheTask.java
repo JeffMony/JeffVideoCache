@@ -83,7 +83,9 @@ public abstract class VideoCacheTask {
      * @param startPosition
      * @return
      */
-    public boolean isMp4PositionSegExisted(long startPosition) { return true; }
+    public boolean isMp4PositionSegExisted(long startPosition) { return false; }
+
+    public boolean isMp4Completed() { return false; }
 
     protected void setThreadPoolArgument(int corePoolSize, int maxPoolSize) {
         if (isTaskRunning()) {
