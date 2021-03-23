@@ -118,33 +118,38 @@ public class Mp4Response extends BaseResponse {
                     } else {
                         //randomAccessFile seek到具体的offset
                         randomAccessFile.seek(offset);
-                        int readLength = 0;
-                        //接下来要写入到socket中, 一定要判断randomAccessFile中是否有数据可以写
-                        boolean shouldWriteResponseData = VideoProxyCacheManager.getInstance().shouldWriteResponseData(mVideoUrl, offset);
-                        while (shouldWriteResponseData && ((readLength = randomAccessFile.read(buffer, 0, buffer.length)) != -1)) {
-                            offset += readLength;
+                        int readLength;
+                        while ((readLength = randomAccessFile.read(buffer, 0, buffer.length)) != -1) {
+                            offset +=readLength;
                             outputStream.write(buffer, 0, readLength);
                             randomAccessFile.seek(offset);
-                            shouldWriteResponseData = VideoProxyCacheManager.getInstance().shouldWriteResponseData(mVideoUrl, offset);
-                            LogUtils.d(TAG, "shouldWriteResponseData="+shouldWriteResponseData+", offset="+offset+", readLength="+readLength+", instance="+this);
                         }
-
-                        if (offset == totalSize && VideoProxyCacheManager.getInstance().isMp4Completed(mVideoUrl)) {
-                            LogUtils.i(TAG, "Video file is cached in local storage. instance="+this);
+                        //接下来要写入到socket中, 一定要判断randomAccessFile中是否有数据可以写
+                        if (offset == totalSize && (VideoProxyCacheManager.getInstance().isMp4Completed(mVideoUrl) || VideoProxyCacheManager.getInstance().isMp4CompletedFromPosition(mVideoUrl, offset))) {
+                            LogUtils.i(TAG, "# Video file is cached in local storage. instance=" + this);
                             break;
                         }
+                        if (offset < available) {
+                            continue;
+                        }
+                        long lastAvailable = available;
+                        available = randomAccessFile.length();
                         waitTime = WAIT_TIME;
-                        while(!shouldWriteResponseData && readLength == -1) {
+                        while(available - lastAvailable < bufferedSize && shouldSendResponse(socket, mMd5)) {
+                            if (offset == totalSize && (VideoProxyCacheManager.getInstance().isMp4Completed(mVideoUrl) || VideoProxyCacheManager.getInstance().isMp4CompletedFromPosition(mVideoUrl, offset))) {
+                                LogUtils.i(TAG, "## Video file is cached in local storage. instance=" + this);
+                                break;
+                            }
                             synchronized (lock) {
+                                LogUtils.i(TAG, "LOCK wait, instance="+this);
                                 waitTime = getDelayTime(waitTime);
                                 lock.wait(waitTime);
                             }
-                            shouldWriteResponseData = VideoProxyCacheManager.getInstance().shouldWriteResponseData(mVideoUrl, offset);
+                            available = randomAccessFile.length();
                             if (waitTime < MAX_WAIT_TIME) {
                                 waitTime *= 2;
                             }
                         }
-                        available = randomAccessFile.length();
                     }
                 }
             }

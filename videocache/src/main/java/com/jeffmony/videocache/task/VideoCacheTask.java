@@ -87,6 +87,13 @@ public abstract class VideoCacheTask {
 
     public boolean isMp4Completed() { return false; }
 
+    /**
+     * position之后的数据是否缓存完全
+     * @param position
+     * @return
+     */
+    public boolean isMp4CompletedFromPosition(long position) { return false; }
+
     protected void setThreadPoolArgument(int corePoolSize, int maxPoolSize) {
         if (isTaskRunning()) {
             mTaskExecutor.setCorePoolSize(corePoolSize);

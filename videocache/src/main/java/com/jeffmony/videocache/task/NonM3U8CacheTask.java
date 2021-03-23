@@ -247,6 +247,27 @@ public class NonM3U8CacheTask extends VideoCacheTask {
         return false;
     }
 
+    @Override
+    public boolean isMp4CompletedFromPosition(long position) {
+        synchronized (mSegMapLock) {
+            if (mVideoSegMap != null) {
+                for (Map.Entry entry : mVideoSegMap.entrySet()) {
+                    long start = (long) entry.getKey();
+                    long end = (long) entry.getValue();
+                    if (start <= position && end == mTotalSize) {
+                        return true;
+                    }
+                }
+            }
+        }
+        if (mRequestRange != null) {
+            boolean result = mRequestRange.getStart() <= position && position < mRequestRange.getEnd();
+            result = result && (mCachedSize == mRequestRange.getEnd());
+            return result;
+        }
+        return false;
+    }
+
     private void startRequestVideoRange(long curLength) {
         if (mCacheInfo.isCompleted()) {
             notifyOnTaskCompleted();

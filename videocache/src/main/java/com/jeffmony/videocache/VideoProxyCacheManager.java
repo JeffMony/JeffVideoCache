@@ -50,6 +50,7 @@ public class VideoProxyCacheManager {
     private Map<String, VideoCacheInfo> mCacheInfoMap = new ConcurrentHashMap<>();
     private Map<String, IVideoCacheListener> mCacheListenerMap = new ConcurrentHashMap<>();
     private Map<String, Long> mVideoSeekMd5PositionMap = new ConcurrentHashMap<>();      //发生seek的时候加入set, 如果可以播放了, remove掉
+    private final Object mSeekPositionLock = new Object();
 
     private Set<String> mM3U8LocalProxyMd5Set = new ConcurrentSkipListSet<>();
     private Set<String> mM3U8LiveMd5Set = new ConcurrentSkipListSet<>();
@@ -323,6 +324,7 @@ public class VideoProxyCacheManager {
             @Override
             public void onTaskProgress(float percent, long cachedSize, float speed) {
                 if (shouldNotifyLock(cacheInfo.getVideoType(), cacheInfo.getVideoUrl(), cacheInfo.getMd5())) {
+                    LogUtils.i(TAG, "onTaskProgress ----, cachedSize="+cachedSize);
                     notifyLocalProxyLock(lock);
                 }
                 cacheInfo.setPercent(percent);
@@ -352,6 +354,7 @@ public class VideoProxyCacheManager {
             @Override
             public void onTaskCompleted(long totalSize) {
                 if (shouldNotifyLock(cacheInfo.getVideoType(), cacheInfo.getVideoUrl(), cacheInfo.getMd5())) {
+                    LogUtils.i(TAG, "onTaskCompleted ----, totalSize="+totalSize);
                     notifyLocalProxyLock(lock);
                 }
                 cacheInfo.setTotalSize(totalSize);
@@ -410,37 +413,43 @@ public class VideoProxyCacheManager {
 
     private void addVideoSeekInfo(String url) {
         String md5 = ProxyCacheUtils.computeMD5(url);
-        LogUtils.i(TAG, "addVideoSeekInfo md5=" + md5+", url="+url);
-        mVideoSeekMd5PositionMap.put(md5, -1L);
+        synchronized (mSeekPositionLock) {
+            LogUtils.i(TAG, "addVideoSeekInfo md5=" + md5 + ", url=" + url);
+            mVideoSeekMd5PositionMap.put(md5, -1L);
+        }
     }
 
     private boolean shouldNotifyLock(int videoType, String url, String md5) {
-        //只有非M3U8视频才能进入这个逻辑
-        if (videoType == VideoType.OTHER_TYPE && mVideoSeekMd5PositionMap.containsKey(md5)) {
-            long position = mVideoSeekMd5PositionMap.get(md5).longValue();
-            LogUtils.i(TAG, "shouldNotifyLock position=" + position+", url="+url);
-            if (position > 0) {
-                boolean isMp4PositionSegExisted = isMp4PositionSegExisted(url, position);
-                LogUtils.i(TAG, "shouldNotifyLock position=" + position + ", isMp4PositionSegExisted="+isMp4PositionSegExisted);
-                if (isMp4PositionSegExisted) {
-                    mVideoSeekMd5PositionMap.remove(md5);
-                    return true;
+        synchronized (mSeekPositionLock) {
+            //只有非M3U8视频才能进入这个逻辑
+            if (videoType == VideoType.OTHER_TYPE && mVideoSeekMd5PositionMap.containsKey(md5)) {
+                long position = mVideoSeekMd5PositionMap.get(md5).longValue();
+                LogUtils.i(TAG, "shouldNotifyLock position=" + position + ", url=" + url);
+                if (position > 0) {
+                    boolean isMp4PositionSegExisted = isMp4PositionSegExisted(url, position);
+                    LogUtils.i(TAG, "shouldNotifyLock position=" + position + ", isMp4PositionSegExisted=" + isMp4PositionSegExisted);
+                    if (isMp4PositionSegExisted) {
+                        mVideoSeekMd5PositionMap.remove(md5);
+                        return true;
+                    } else {
+                        //说明发生了seek, 但是seek请求并没有结束
+                        return false;
+                    }
                 } else {
-                    //说明发生了seek, 但是seek请求并没有结束
+                    //说明次数有seek操作,但是seek操作还没有从local server端发送过来
                     return false;
                 }
-            } else {
-                //说明次数有seek操作,但是seek操作还没有从local server端发送过来
-                return false;
             }
+            return true;
         }
-        return true;
     }
 
     private void removeVideoSeekInfo(String md5) {
-        if (mVideoSeekMd5PositionMap.containsKey(md5)) {
-            LogUtils.i(TAG, "removeVideoSeekSet = " + md5);
-            mVideoSeekMd5PositionMap.remove(md5);
+        synchronized (mSeekPositionLock) {
+            if (mVideoSeekMd5PositionMap.containsKey(md5)) {
+                LogUtils.i(TAG, "removeVideoSeekSet = " + md5);
+                mVideoSeekMd5PositionMap.remove(md5);
+            }
         }
     }
 
@@ -451,15 +460,19 @@ public class VideoProxyCacheManager {
      */
     public void setVideoRangeRequest(String url, long startPosition) {
         String md5 = ProxyCacheUtils.computeMD5(url);
-        long oldPosition = mVideoSeekMd5PositionMap.containsKey(md5) ? mVideoSeekMd5PositionMap.get(md5) : -1L;
-        //说明这是一个新的seek操作
-        if (oldPosition == -1L) {
-            LogUtils.i(TAG, "setVideoRangeRequest startPosition="+startPosition);
-            mVideoSeekMd5PositionMap.put(md5, startPosition);
-            VideoCacheTask cacheTask = mCacheTaskMap.get(url);
-            if (cacheTask != null) {
-                cacheTask.seekToCacheTask(startPosition);
+        boolean shouldSeek = false;
+        synchronized (mSeekPositionLock) {
+            long oldPosition = mVideoSeekMd5PositionMap.containsKey(md5) ? mVideoSeekMd5PositionMap.get(md5) : -1L;
+            //说明这是一个新的seek操作
+            if (oldPosition == -1L) {
+                LogUtils.i(TAG, "setVideoRangeRequest startPosition=" + startPosition);
+                mVideoSeekMd5PositionMap.put(md5, startPosition);
+                shouldSeek = true;
             }
+        }
+        VideoCacheTask cacheTask = mCacheTaskMap.get(url);
+        if (cacheTask != null && shouldSeek) {
+            cacheTask.seekToCacheTask(startPosition);
         }
     }
 
@@ -490,6 +503,20 @@ public class VideoProxyCacheManager {
         VideoCacheTask cacheTask = mCacheTaskMap.get(url);
         if (cacheTask != null) {
             return cacheTask.isMp4Completed();
+        }
+        return false;
+    }
+
+    /**
+     * 从position开始,之后的数据都缓存完全了.
+     * @param url
+     * @param position
+     * @return
+     */
+    public boolean isMp4CompletedFromPosition(String url, long position) {
+        VideoCacheTask cacheTask = mCacheTaskMap.get(url);
+        if (cacheTask != null) {
+            return cacheTask.isMp4CompletedFromPosition(position);
         }
         return false;
     }
@@ -545,12 +572,12 @@ public class VideoProxyCacheManager {
         return mPlayingUrlMd5;
     }
 
-    public boolean isM3U8TsCompleted(String m3u8Md5, int tsIndex, String filePath) {
+    public boolean isM3U8SegCompleted(String m3u8Md5, int tsIndex, String filePath) {
         if (TextUtils.isEmpty(m3u8Md5) || TextUtils.isEmpty(filePath)) {
             return false;
         }
-        File tsFile = new File(filePath);
-        if (!tsFile.exists() || tsFile.length() == 0) {
+        File segFile = new File(filePath);
+        if (!segFile.exists() || segFile.length() == 0) {
             return false;
         }
         for(Map.Entry entry : mCacheInfoMap.entrySet()) {
@@ -563,7 +590,7 @@ public class VideoProxyCacheManager {
                 Map<Integer, Long> tsLengthMap = cacheInfo.getTsLengthMap();
                 if (tsLengthMap != null) {
                     long tsLength = tsLengthMap.get(tsIndex) != null ? tsLengthMap.get(tsIndex) : 0;
-                    return tsFile.length() == tsLength;
+                    return segFile.length() == tsLength;
                 }
             }
         }

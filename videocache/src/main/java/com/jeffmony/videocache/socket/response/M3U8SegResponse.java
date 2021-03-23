@@ -81,16 +81,16 @@ public class M3U8SegResponse extends BaseResponse {
     public void sendBody(Socket socket, OutputStream outputStream, long pending) throws Exception {
         if (mFileName.startsWith(ProxyCacheUtils.INIT_SEGMENT_PREFIX)) {
             while(!mSegFile.exists()) {
-                downloadTsFile(mSegUrl, mSegFile);
+                downloadSegFile(mSegUrl, mSegFile);
                 if (mSegLength > 0 && mSegLength == mSegFile.length()) {
                     break;
                 }
             }
         } else {
-            boolean isM3U8TsCompleted = VideoProxyCacheManager.getInstance().isM3U8TsCompleted(mM3U8Md5, mSegIndex, mSegFile.getAbsolutePath());
-            while (!isM3U8TsCompleted) {
-                downloadTsFile(mSegUrl, mSegFile);
-                isM3U8TsCompleted = VideoProxyCacheManager.getInstance().isM3U8TsCompleted(mM3U8Md5, mSegIndex, mSegFile.getAbsolutePath());
+            boolean isM3U8SegCompleted = VideoProxyCacheManager.getInstance().isM3U8SegCompleted(mM3U8Md5, mSegIndex, mSegFile.getAbsolutePath());
+            while (!isM3U8SegCompleted) {
+                downloadSegFile(mSegUrl, mSegFile);
+                isM3U8SegCompleted = VideoProxyCacheManager.getInstance().isM3U8SegCompleted(mM3U8Md5, mSegIndex, mSegFile.getAbsolutePath());
                 if (mSegLength > 0 && mSegLength == mSegFile.length()) {
                     break;
                 }
@@ -126,7 +126,7 @@ public class M3U8SegResponse extends BaseResponse {
         }
     }
 
-    private void downloadTsFile(String url, File file) throws Exception {
+    private void downloadSegFile(String url, File file) throws Exception {
         HttpURLConnection connection = null;
         InputStream inputStream = null;
         try {
