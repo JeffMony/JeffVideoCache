@@ -174,14 +174,14 @@ public class Mp4CacheTask extends VideoCacheTask {
     }
 
     @Override
-    public void seekToCacheTask(float percent) {
+    public void seekToCacheTaskFromClient(float percent) {
         //非M3U8视频用不到,因为这样估计请求的起始点,gap太大了.
         //有拖动进度条, 肯定不能从原来的range 开始请求了, 有新的range请求, 那就要停掉原来的range请求
         notifyOnVideoSeekComplete();
     }
 
     @Override
-    public void seekToCacheTask(long startPosition) {
+    public void seekToCacheTaskFromServer(long startPosition) {
         //真正的拖动进度条, 这儿要真正构建新的range请求
         boolean shouldSeekToCacheTask = shouldSeekToCacheTask(startPosition);
         LogUtils.i(TAG, "seekToCacheTask ====> shouldSeekToCacheTask="+shouldSeekToCacheTask+", startPosition="+startPosition);

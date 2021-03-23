@@ -73,7 +73,7 @@ public class LocalProxyVideoControl {
         long totalDuration = mPlayer.getDuration();
         if (totalDuration > 0) {
             float percent = position * 1.0f / totalDuration;
-            VideoProxyCacheManager.getInstance().seekToCacheTask(mVideoUrl, percent);
+            VideoProxyCacheManager.getInstance().seekToCacheTaskFromClient(mVideoUrl, percent);
         }
     }
 

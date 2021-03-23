@@ -136,48 +136,88 @@ public class Mp4CacheSingleTask extends VideoCacheTask {
             return;
         }
         notifyOnTaskStart();
-        mRequestRange = getRequestRange(0L);
-        mVideoCacheThread = new Mp4VideoCacheThread(mVideoUrl, mHeaders, mRequestRange, mTotalSize, mSaveDir.getAbsolutePath(), mCacheThreadListener);
-        VideoProxyThreadUtils.submitRunnableTask(mVideoCacheThread);
+        LogUtils.i(TAG, "startCacheTask");
+        VideoRange requestRange = getRequestRange(0L);
+        startVideoCacheThread(requestRange);
     }
 
     @Override
     public void pauseCacheTask() {
+        LogUtils.i(TAG, "pauseCacheTask");
         if (mVideoCacheThread != null) {
             mVideoCacheThread.pause();
             mVideoCacheThread = null;
+        }
+        if (!mCacheInfo.isCompleted() && mRequestRange != null) {
+            long tempRangeStart = mRequestRange.getStart();
+            long tempRangeEnd = mCachedSize;
+            mRequestRange = new VideoRange(tempRangeStart, tempRangeEnd);
+            updateVideoRangeInfo();
         }
     }
 
     @Override
     public void stopCacheTask() {
+        LogUtils.i(TAG, "stopCacheTask");
+        if (mVideoCacheThread != null) {
+            mVideoCacheThread.pause();
+            mVideoCacheThread = null;
+        }
+        if (!mCacheInfo.isCompleted() && mRequestRange != null) {
+            long tempRangeStart = mRequestRange.getStart();
+            long tempRangeEnd = mCachedSize;
+            mRequestRange = new VideoRange(tempRangeStart, tempRangeEnd);
+            updateVideoRangeInfo();
+        }
+    }
+
+    @Override
+    public void seekToCacheTaskFromClient(float percent) {
 
     }
 
     @Override
-    public void seekToCacheTask(float percent) {
-
-    }
-
-    @Override
-    public void seekToCacheTask(long startPosition) {
+    public void seekToCacheTaskFromServer(long startPosition) {
 
     }
 
     @Override
     public void resumeCacheTask() {
+        LogUtils.i(TAG, "resumeCacheTask");
+        if (mCachedSize < mTotalSize) {
+            VideoRange requestRange = getRequestRange(mCachedSize);
+            startVideoCacheThread(requestRange);
+        }
+    }
 
+    private void startVideoCacheThread(VideoRange requestRange) {
+        mRequestRange = requestRange;
+        mVideoCacheThread = new Mp4VideoCacheThread(mVideoUrl, mHeaders, requestRange, mTotalSize, mSaveDir.getAbsolutePath(), mCacheThreadListener);
+        VideoProxyThreadUtils.submitRunnableTask(mVideoCacheThread);
     }
 
     private void notifyOnCacheProgress(long cachedSize, float speed, float percent) {
+        mCachedSize = cachedSize;
         mCacheInfo.setCachedSize(cachedSize);
         mCacheInfo.setSpeed(speed);
         mCacheInfo.setPercent(percent);
-        notifyOnCacheProgress(cachedSize, speed, percent);
+        mListener.onTaskProgress(percent, mCachedSize, mSpeed);
     }
 
     private void notifyOnCacheRangeCompleted(long startPosition) {
-        //先save一下当前的缓存数据
+        //这时候已经缓存好了一段分片,可以更新一下video range数据结构了
+        updateVideoRangeInfo();
+        if (mCacheInfo.isCompleted()) {
+            notifyOnTaskCompleted();
+        } else {
+            if (startPosition == mTotalSize) {
+                //说明已经缓存好,但是整视频中间还有一些洞,但是不影响,可以忽略
+            } else {
+                //开启下一段视频分片的缓存
+                VideoRange requestRange = getRequestRange(startPosition);
+                startVideoCacheThread(requestRange);
+            }
+        }
 
     }
 
@@ -262,6 +302,8 @@ public class Mp4CacheSingleTask extends VideoCacheTask {
                 mCacheInfo.setIsCompleted(true);
             }
         }
+
+        //子线程中执行
         saveVideoInfo();
     }
 }

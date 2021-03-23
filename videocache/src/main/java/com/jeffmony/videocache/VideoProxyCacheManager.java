@@ -20,6 +20,7 @@ import com.jeffmony.videocache.m3u8.M3U8;
 import com.jeffmony.videocache.model.VideoCacheInfo;
 import com.jeffmony.videocache.proxy.LocalProxyVideoServer;
 import com.jeffmony.videocache.task.M3U8CacheTask;
+import com.jeffmony.videocache.task.Mp4CacheSingleTask;
 import com.jeffmony.videocache.task.Mp4CacheTask;
 import com.jeffmony.videocache.task.VideoCacheTask;
 import com.jeffmony.videocache.utils.LogUtils;
@@ -307,7 +308,7 @@ public class VideoProxyCacheManager {
     private void startNonM3U8Task(VideoCacheInfo cacheInfo, Map<String, String> headers) {
         VideoCacheTask cacheTask = mCacheTaskMap.get(cacheInfo.getVideoUrl());
         if (cacheTask == null) {
-            cacheTask = new Mp4CacheTask(cacheInfo, headers);
+            cacheTask = new Mp4CacheSingleTask(cacheInfo, headers);
             mCacheTaskMap.put(cacheInfo.getVideoUrl(), cacheTask);
         }
         startVideoCacheTask(cacheTask, cacheInfo);
@@ -406,12 +407,12 @@ public class VideoProxyCacheManager {
      * @param url
      * @param percent
      */
-    public void seekToCacheTask(String url, float percent) {
+    public void seekToCacheTaskFromClient(String url, float percent) {
         VideoCacheTask cacheTask = mCacheTaskMap.get(url);
         if (cacheTask != null) {
             //当前seek到什么position在客户端不知道
             addVideoSeekInfo(url);
-            cacheTask.seekToCacheTask(percent);
+            cacheTask.seekToCacheTaskFromClient(percent);
         }
     }
 
@@ -466,7 +467,7 @@ public class VideoProxyCacheManager {
      * @param url
      * @param startPosition
      */
-    public void setVideoRangeRequest(String url, long startPosition) {
+    public void seekToCacheTaskFromServer(String url, long startPosition) {
         String md5 = ProxyCacheUtils.computeMD5(url);
         boolean shouldSeek = false;
         synchronized (mSeekPositionLock) {
@@ -480,7 +481,7 @@ public class VideoProxyCacheManager {
         }
         VideoCacheTask cacheTask = mCacheTaskMap.get(url);
         if (cacheTask != null && shouldSeek) {
-            cacheTask.seekToCacheTask(startPosition);
+            cacheTask.seekToCacheTaskFromServer(startPosition);
         }
     }
 

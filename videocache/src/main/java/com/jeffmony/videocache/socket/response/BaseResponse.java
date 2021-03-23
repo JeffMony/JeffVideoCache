@@ -58,8 +58,7 @@ public abstract class BaseResponse {
             if (mResponseState == null) {
                 throw new VideoCacheException("sendResponse(): Status can't be null.");
             }
-            PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(
-                    outputStream, new ContentType(mMimeType).getEncoding())),false);
+            PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(outputStream, new ContentType(mMimeType).getEncoding())),false);
             if (TextUtils.isEmpty(mProtocolVersion)) {
                 pw.append("HTTP/1.1 ");
             } else {
@@ -74,6 +73,7 @@ public abstract class BaseResponse {
             if (mRequest.requestMethod() != Method.HEAD) {
                 appendHeader(pw, TRANSFER_ENCODING, "chunked");
             }
+
             pw.append("\r\n");
             pw.flush();
             sendBodyWithCorrectTransferAndEncoding(socket, outputStream);

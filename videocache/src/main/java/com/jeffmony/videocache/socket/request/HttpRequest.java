@@ -42,7 +42,7 @@ public class HttpRequest {
                         ? ProxyCacheUtils.LOCAL_PROXY_HOST
                         : inetAddress.getHostAddress();
         mHeaders = new HashMap<>();
-        mKeepAlive = true;
+        mKeepAlive = false;
     }
 
     public void parseRequest() throws Exception {

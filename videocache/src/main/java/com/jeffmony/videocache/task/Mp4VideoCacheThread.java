@@ -144,5 +144,4 @@ public class Mp4VideoCacheThread implements Runnable {
         mListener.onCacheRangeCompleted(mRequestRange);
     }
 
-
 }

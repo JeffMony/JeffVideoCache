@@ -111,14 +111,13 @@ public class M3U8CacheTask extends VideoCacheTask {
     }
 
     @Override
-    public void seekToCacheTask(long startPosition) {
-        //针对非M3U8视频的接口, M3U8视频可以忽略
+    public void seekToCacheTaskFromClient(float percent) {
+        int seekTsIndex = (int)(percent * mTotalSegCount);
+        startRequestVideoRange(seekTsIndex);
     }
 
     @Override
-    public void seekToCacheTask(float percent) {
-        int seekTsIndex = (int)(percent * mTotalSegCount);
-        startRequestVideoRange(seekTsIndex);
+    public void seekToCacheTaskFromServer(long startPosition) {
     }
 
     private void startRequestVideoRange(int curTs) {

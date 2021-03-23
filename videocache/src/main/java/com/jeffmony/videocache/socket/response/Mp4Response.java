@@ -27,18 +27,31 @@ public class Mp4Response extends BaseResponse {
     private File mFile;
     private String mMd5;
     private long mStartPosition;
+    private long mTotalSize;
 
-    public Mp4Response(HttpRequest request, String videoUrl, Map<String, String> headers, long time) {
+    public Mp4Response(HttpRequest request, String videoUrl, Map<String, String> headers, long time) throws Exception {
         super(request, videoUrl, headers, time);
         mMd5 = ProxyCacheUtils.computeMD5(videoUrl);
         mFile = new File(mCachePath, mMd5 + File.separator + mMd5 + StorageUtils.NON_M3U8_SUFFIX);
         mResponseState = ResponseState.OK;
+        Object lock = VideoLockManager.getInstance().getLock(mMd5);
+        int waitTime = WAIT_TIME;
+        mTotalSize = VideoProxyCacheManager.getInstance().getTotalSize(mMd5);
+        //等不到MP4文件大小就不返回
+        while (mTotalSize <= 0) {
+            synchronized (lock) {
+                lock.wait(waitTime);
+            }
+            mTotalSize = VideoProxyCacheManager.getInstance().getTotalSize(mMd5);
+        }
+
         String rangeStr = request.getRangeString();
         mStartPosition = getRequestStartPosition(rangeStr);
         LogUtils.i(TAG, "Range header=" + request.getRangeString() + ", start position="+mStartPosition +", instance="+this);
         if (mStartPosition != -1) {
+            mResponseState = ResponseState.PARTIAL_CONTENT;
             //服务端将range起始位置设置到客户端
-            VideoProxyCacheManager.getInstance().setVideoRangeRequest(videoUrl, mStartPosition);
+            VideoProxyCacheManager.getInstance().seekToCacheTaskFromServer(videoUrl, mStartPosition);
         }
     }
 
@@ -68,12 +81,6 @@ public class Mp4Response extends BaseResponse {
         }
         Object lock = VideoLockManager.getInstance().getLock(mMd5);
         int waitTime = WAIT_TIME;
-        long totalSize = VideoProxyCacheManager.getInstance().getTotalSize(mMd5);
-        while (!mFile.exists() && totalSize <= 0) {
-            synchronized (lock) {
-                lock.wait(waitTime);
-            }
-        }
         boolean isPositionSegExisted = VideoProxyCacheManager.getInstance().isMp4PositionSegExisted(mVideoUrl, mStartPosition);
         while(!isPositionSegExisted) {
             synchronized (lock) {
