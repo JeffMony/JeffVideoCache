@@ -69,6 +69,10 @@ public abstract class VideoCacheTask {
         mListener.onTaskCompleted(mTotalSize);
     }
 
+    protected void notifyOnVideoSeekComplete() {
+        mListener.onVideoSeekComplete();
+    }
+
     public boolean isTaskRunning() {
         return mTaskExecutor != null && !mTaskExecutor.isShutdown();
     }
@@ -93,6 +97,13 @@ public abstract class VideoCacheTask {
      * @return
      */
     public boolean isMp4CompletedFromPosition(long position) { return false; }
+
+    /**
+     * 获取mp4视频最近的缓存点
+     * @param position
+     * @return
+     */
+    public long getMp4CachedPosition(long position) { return -1L; }
 
     protected void setThreadPoolArgument(int corePoolSize, int maxPoolSize) {
         if (isTaskRunning()) {

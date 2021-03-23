@@ -35,8 +35,8 @@ public class M3U8SegResponse extends BaseResponse {
     private long mSegLength;
     private String mFileName;
 
-    public M3U8SegResponse(HttpRequest request, String videoUrl, Map<String, String> headers, String fileName) throws Exception {
-        super(request, videoUrl, headers);
+    public M3U8SegResponse(HttpRequest request, String videoUrl, Map<String, String> headers, long time, String fileName) throws Exception {
+        super(request, videoUrl, headers, time);
         mSegUrl = videoUrl;
         mSegFile = new File(mCachePath, fileName);
         LogUtils.i(TAG, "SegFilePath="+mSegFile.getAbsolutePath());

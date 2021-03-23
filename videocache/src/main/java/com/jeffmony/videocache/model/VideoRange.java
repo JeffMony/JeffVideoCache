@@ -24,8 +24,7 @@ public class VideoRange {
         if (this == o) return true;
         if (!(o instanceof VideoRange)) return false;
         VideoRange that = (VideoRange) o;
-        return mStart == that.mStart &&
-                mEnd == that.mEnd;
+        return mStart == that.mStart && mEnd == that.mEnd;
     }
 
     @Override

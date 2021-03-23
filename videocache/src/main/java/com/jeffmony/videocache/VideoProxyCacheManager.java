@@ -20,7 +20,7 @@ import com.jeffmony.videocache.m3u8.M3U8;
 import com.jeffmony.videocache.model.VideoCacheInfo;
 import com.jeffmony.videocache.proxy.LocalProxyVideoServer;
 import com.jeffmony.videocache.task.M3U8CacheTask;
-import com.jeffmony.videocache.task.NonM3U8CacheTask;
+import com.jeffmony.videocache.task.Mp4CacheTask;
 import com.jeffmony.videocache.task.VideoCacheTask;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
@@ -307,7 +307,7 @@ public class VideoProxyCacheManager {
     private void startNonM3U8Task(VideoCacheInfo cacheInfo, Map<String, String> headers) {
         VideoCacheTask cacheTask = mCacheTaskMap.get(cacheInfo.getVideoUrl());
         if (cacheTask == null) {
-            cacheTask = new NonM3U8CacheTask(cacheInfo, headers);
+            cacheTask = new Mp4CacheTask(cacheInfo, headers);
             mCacheTaskMap.put(cacheInfo.getVideoUrl(), cacheTask);
         }
         startVideoCacheTask(cacheTask, cacheInfo);
@@ -324,7 +324,6 @@ public class VideoProxyCacheManager {
             @Override
             public void onTaskProgress(float percent, long cachedSize, float speed) {
                 if (shouldNotifyLock(cacheInfo.getVideoType(), cacheInfo.getVideoUrl(), cacheInfo.getMd5())) {
-                    LogUtils.i(TAG, "onTaskProgress ----, cachedSize="+cachedSize);
                     notifyLocalProxyLock(lock);
                 }
                 cacheInfo.setPercent(percent);
@@ -349,6 +348,11 @@ public class VideoProxyCacheManager {
             public void onTaskFailed(Exception e) {
                 notifyLocalProxyLock(lock);
                 mProxyHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_ERROR, cacheInfo).sendToTarget();
+            }
+
+            @Override
+            public void onVideoSeekComplete() {
+                notifyLocalProxyLock(lock);
             }
 
             @Override
@@ -436,6 +440,10 @@ public class VideoProxyCacheManager {
                         return false;
                     }
                 } else {
+                    if (isMp4Completed(url)) {
+                        mVideoSeekMd5PositionMap.remove(md5);
+                        return true;
+                    }
                     //说明次数有seek操作,但是seek操作还没有从local server端发送过来
                     return false;
                 }
@@ -462,8 +470,8 @@ public class VideoProxyCacheManager {
         String md5 = ProxyCacheUtils.computeMD5(url);
         boolean shouldSeek = false;
         synchronized (mSeekPositionLock) {
-            long oldPosition = mVideoSeekMd5PositionMap.containsKey(md5) ? mVideoSeekMd5PositionMap.get(md5) : -1L;
-            //说明这是一个新的seek操作
+            long oldPosition = mVideoSeekMd5PositionMap.containsKey(md5) ? mVideoSeekMd5PositionMap.get(md5) : 0L;
+            //说明这是一个新的seek操作, oldPosition =0L, 说明此时没有发生seek操作
             if (oldPosition == -1L) {
                 LogUtils.i(TAG, "setVideoRangeRequest startPosition=" + startPosition);
                 mVideoSeekMd5PositionMap.put(md5, startPosition);
@@ -533,6 +541,14 @@ public class VideoProxyCacheManager {
             return cacheTask.isMp4PositionSegExisted(position);
         }
         return false;
+    }
+
+    public long getMp4CachedPosition(String url, long position) {
+        VideoCacheTask cacheTask = mCacheTaskMap.get(url);
+        if (cacheTask != null) {
+            return cacheTask.getMp4CachedPosition(position);
+        }
+        return -1L;
     }
 
     private void notifyLocalProxyLock(Object lock) {

@@ -13,4 +13,6 @@ public interface IVideoCacheTaskListener {
 
     void onTaskCompleted(long totalSize);
 
+    void onVideoSeekComplete();
+
 }

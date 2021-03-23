@@ -33,19 +33,19 @@ import java.util.concurrent.TimeUnit;
  *                          seg1
  * |--------------------------------------------------|
  */
-public class NonM3U8CacheTask extends VideoCacheTask {
+public class Mp4CacheTask extends VideoCacheTask {
 
-    private static final String TAG = "NonM3U8CacheTask";
+    private static final String TAG = "Mp4CacheTask";
 
     private final Object mSegMapLock = new Object();
-    private LinkedHashMap<Long, Long> mVideoSegMap;    //本地序列化的range结构
+    private LinkedHashMap<Long, Long> mVideoSegMap;            //本地序列化的range结构
     private LinkedHashMap<Long, VideoRange> mVideoRangeMap;    //已经缓存的video range结构
-    private VideoRange mRequestRange;    //当前请求的video range
+    private VideoRange mRequestRange;                          //当前请求的video range
 
-    private String mMd5;
     private String mVideoUrl;
+    private String mMd5;
 
-    public NonM3U8CacheTask(VideoCacheInfo cacheInfo, Map<String, String> headers) {
+    public Mp4CacheTask(VideoCacheInfo cacheInfo, Map<String, String> headers) {
         super(cacheInfo, headers);
         mTotalSize = cacheInfo.getTotalSize();
         mVideoSegMap = cacheInfo.getVideoSegMap();
@@ -177,6 +177,7 @@ public class NonM3U8CacheTask extends VideoCacheTask {
     public void seekToCacheTask(float percent) {
         //非M3U8视频用不到,因为这样估计请求的起始点,gap太大了.
         //有拖动进度条, 肯定不能从原来的range 开始请求了, 有新的range请求, 那就要停掉原来的range请求
+        notifyOnVideoSeekComplete();
     }
 
     @Override
@@ -240,7 +241,7 @@ public class NonM3U8CacheTask extends VideoCacheTask {
             }
         }
         if (mRequestRange != null) {
-            boolean result = mRequestRange.getStart() <= startPosition && startPosition < mRequestRange.getEnd();
+            boolean result = mRequestRange.getStart() <= startPosition && startPosition <= mRequestRange.getEnd();
             result = result && (mCachedSize >= startPosition);
             return result;
         }
@@ -266,6 +267,31 @@ public class NonM3U8CacheTask extends VideoCacheTask {
             return result;
         }
         return false;
+    }
+
+    @Override
+    public long getMp4CachedPosition(long position) {
+        long finalPosition = -1L;
+        synchronized (mSegMapLock) {
+            if (mVideoSegMap != null) {
+                for (Map.Entry entry : mVideoSegMap.entrySet()) {
+                    long start = (long) entry.getKey();
+                    long end = (long) entry.getValue();
+                    if (start <= position && position <= end) {
+                        finalPosition = end;
+                    }
+                }
+            }
+        }
+        if (finalPosition == mTotalSize) {
+            return finalPosition;
+        }
+        if (mRequestRange != null) {
+            if (finalPosition == -1L || (finalPosition != -1L && mRequestRange.getStart() == finalPosition)) {
+                finalPosition = mCachedSize;
+            }
+        }
+        return finalPosition;
     }
 
     private void startRequestVideoRange(long curLength) {

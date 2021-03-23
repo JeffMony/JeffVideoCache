@@ -46,6 +46,9 @@ public class SocketProcessTask implements Runnable {
                 url = url.substring(1);
                 url = ProxyCacheUtils.decodeUriWithBase64(url);
                 LogUtils.d(TAG, "request url=" + url);
+
+                long currentTime = System.currentTimeMillis();
+                ProxyCacheUtils.setSocketTime(currentTime);
                 if (url.contains(ProxyCacheUtils.VIDEO_PROXY_SPLIT_STR)) {
                     String[] videoInfoArr = url.split(ProxyCacheUtils.VIDEO_PROXY_SPLIT_STR);
                     if (videoInfoArr.length < 3) {
@@ -59,17 +62,17 @@ public class SocketProcessTask implements Runnable {
                     LogUtils.d(TAG, videoUrl + "\n" + videoTypeInfo + "\n" + videoHeaders);
 
                     if (TextUtils.equals(ProxyCacheUtils.M3U8, videoTypeInfo)) {
-                        response = new M3U8Response(request, videoUrl, headers);
+                        response = new M3U8Response(request, videoUrl, headers, currentTime);
                     } else if (TextUtils.equals(ProxyCacheUtils.NON_M3U8, videoTypeInfo)) {
-                        response = new Mp4Response(request, videoUrl, headers);
+                        response = new Mp4Response(request, videoUrl, headers, currentTime);
                     } else {
                         //无法从已知的信息判定视频信息，需要重新请求
                         HttpURLConnection connection = HttpUtils.getConnection(videoUrl, headers);
                         String contentType = connection.getContentType();
                         if (ProxyCacheUtils.isM3U8Mimetype(contentType)) {
-                            response = new M3U8Response(request, videoUrl, headers);
+                            response = new M3U8Response(request, videoUrl, headers, currentTime);
                         } else {
-                            response = new Mp4Response(request, videoUrl, headers);
+                            response = new Mp4Response(request, videoUrl, headers, currentTime);
                         }
                     }
                     response.sendResponse(mSocket, outputStream);
@@ -84,7 +87,7 @@ public class SocketProcessTask implements Runnable {
                     String videoHeaders = videoInfoArr[2];
                     Map<String, String> headers = ProxyCacheUtils.str2Map(videoHeaders);
                     LogUtils.d(TAG, videoUrl + "\n" + fileName + "\n" + videoHeaders);
-                    response = new M3U8SegResponse(request, url, headers, fileName);
+                    response = new M3U8SegResponse(request, url, headers, currentTime, fileName);
                     response.sendResponse(mSocket, outputStream);
                 } else {
                     throw new VideoCacheException("Local Socket Error url");

@@ -35,6 +35,7 @@ public class ProxyCacheUtils {
 
     private static VideoCacheConfig sConfig;
     private static int sLocalPort = 0;
+    private static long mSocketTime;     //socket运行的时间戳
 
     public static void setVideoCacheConfig(VideoCacheConfig config) {
         sConfig = config;
@@ -51,6 +52,10 @@ public class ProxyCacheUtils {
     public static int getLocalPort() {
         return sLocalPort;
     }
+
+    public static void setSocketTime(long time) { mSocketTime = time; }
+
+    public static long getSocketTime() { return mSocketTime; }
 
     public static void close(Closeable closeable) {
         if (closeable != null) {

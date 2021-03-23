@@ -12,8 +12,6 @@ public class VideoParams {
 
     public static final String UNKNOWN  = "UNKNOWN";
 
-    public static final int RETRY_COUNT = 50;
-
     public static final String URL = "url";
     public static final String PERCENT = "percent";
     public static final String SPEED = "speed";

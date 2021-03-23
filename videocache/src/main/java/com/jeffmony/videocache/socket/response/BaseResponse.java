@@ -35,16 +35,18 @@ public abstract class BaseResponse {
     protected final HttpRequest mRequest;
     protected final String mCachePath;
     protected final String mVideoUrl;
+    protected final long mCurrentTime;
     protected Map<String, String> mHeaders;
     protected final String mMimeType;
     protected final String mProtocolVersion;
     protected IState mResponseState;
 
-    public BaseResponse(HttpRequest request, String videoUrl, Map<String, String> headers) {
+    public BaseResponse(HttpRequest request, String videoUrl, Map<String, String> headers, long time) {
         mRequest = request;
         mCachePath = ProxyCacheUtils.getConfig().getFilePath();
         mVideoUrl = videoUrl;
         mHeaders = headers;
+        mCurrentTime = time;
         mMimeType = request.getMimeType();
         mProtocolVersion = request.getProtocolVersion();
     }
@@ -94,7 +96,7 @@ public abstract class BaseResponse {
     public abstract void sendBody(Socket socket, OutputStream outputStream, long pending) throws Exception;
 
     protected boolean shouldSendResponse(Socket socket, String md5) {
-        return !socket.isClosed() && TextUtils.equals(md5, VideoProxyCacheManager.getInstance().getPlayingUrlMd5());
+        return !socket.isClosed() && TextUtils.equals(md5, VideoProxyCacheManager.getInstance().getPlayingUrlMd5()) && (mCurrentTime == ProxyCacheUtils.getSocketTime());
     }
 
     protected int getDelayTime(int waitTime) {

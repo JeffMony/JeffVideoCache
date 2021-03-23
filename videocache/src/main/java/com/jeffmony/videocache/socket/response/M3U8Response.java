@@ -31,8 +31,8 @@ public class M3U8Response extends BaseResponse {
     private String mMd5;
     private File mFile;
 
-    public M3U8Response(HttpRequest request, String videoUrl, Map<String, String> headers) {
-        super(request, videoUrl, headers);
+    public M3U8Response(HttpRequest request, String videoUrl, Map<String, String> headers, long time) {
+        super(request, videoUrl, headers, time);
         mMd5 = ProxyCacheUtils.computeMD5(videoUrl);
         mFile = new File(mCachePath, mMd5 + File.separator + mMd5 + StorageUtils.PROXY_M3U8_SUFFIX);
         mResponseState = ResponseState.OK;
