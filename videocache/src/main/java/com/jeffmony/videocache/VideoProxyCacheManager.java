@@ -20,12 +20,12 @@ import com.jeffmony.videocache.m3u8.M3U8;
 import com.jeffmony.videocache.model.VideoCacheInfo;
 import com.jeffmony.videocache.proxy.LocalProxyVideoServer;
 import com.jeffmony.videocache.task.M3U8CacheTask;
-import com.jeffmony.videocache.task.Mp4CacheSingleTask;
 import com.jeffmony.videocache.task.Mp4CacheTask;
 import com.jeffmony.videocache.task.VideoCacheTask;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
 import com.jeffmony.videocache.utils.StorageUtils;
+import com.jeffmony.videocache.utils.VideoProxyThreadUtils;
 
 import java.io.File;
 import java.util.HashMap;
@@ -308,7 +308,7 @@ public class VideoProxyCacheManager {
     private void startNonM3U8Task(VideoCacheInfo cacheInfo, Map<String, String> headers) {
         VideoCacheTask cacheTask = mCacheTaskMap.get(cacheInfo.getVideoUrl());
         if (cacheTask == null) {
-            cacheTask = new Mp4CacheSingleTask(cacheInfo, headers);
+            cacheTask = new Mp4CacheTask(cacheInfo, headers);
             mCacheTaskMap.put(cacheInfo.getVideoUrl(), cacheTask);
         }
         startVideoCacheTask(cacheTask, cacheInfo);
@@ -372,12 +372,12 @@ public class VideoProxyCacheManager {
     }
 
     /**
-     * 暂停缓存任务
+     * 暂停缓存任务, 一般是主线程操作
      * @param url
      */
     public void pauseCacheTask(String url) {
         VideoCacheTask cacheTask = mCacheTaskMap.get(url);
-        if (cacheTask != null && cacheTask.isTaskRunning()) {
+        if (cacheTask != null) {
             cacheTask.pauseCacheTask();
         }
     }
@@ -391,19 +391,19 @@ public class VideoProxyCacheManager {
     }
 
     /**
-     * 恢复缓存任务
+     * 恢复缓存任务,一般是主线程操作
      * @param url
      */
     public void resumeCacheTask(String url) {
         VideoCacheTask cacheTask = mCacheTaskMap.get(url);
-        if (cacheTask != null && cacheTask.isTaskShutdown()) {
+        if (cacheTask != null) {
             cacheTask.resumeCacheTask();
         }
     }
 
     /**
      * 拖动播放进度条之后的操作
-     * 纯粹客户端的操作
+     * 纯粹客户端的操作, 一般是主线程操作
      * @param url
      * @param percent
      */
@@ -464,6 +464,8 @@ public class VideoProxyCacheManager {
 
     /**
      * 服务端调用到客户端的通知, 这儿可以精确确定客户端应该从什么地方开始seek
+     *
+     * 从服务端调用过来, 肯定不是主线程, 所以要切换到主线程
      * @param url
      * @param startPosition
      */
@@ -479,10 +481,14 @@ public class VideoProxyCacheManager {
                 shouldSeek = true;
             }
         }
-        VideoCacheTask cacheTask = mCacheTaskMap.get(url);
-        if (cacheTask != null && shouldSeek) {
-            cacheTask.seekToCacheTaskFromServer(startPosition);
-        }
+
+        final boolean seekByServer = shouldSeek;
+        VideoProxyThreadUtils.runOnUiThread(() -> {
+            VideoCacheTask cacheTask = mCacheTaskMap.get(url);
+            if (cacheTask != null && seekByServer) {
+                cacheTask.seekToCacheTaskFromServer(startPosition);
+            }
+        });
     }
 
     /**
@@ -549,7 +555,7 @@ public class VideoProxyCacheManager {
         if (cacheTask != null) {
             return cacheTask.getMp4CachedPosition(position);
         }
-        return -1L;
+        return 0L;
     }
 
     private void notifyLocalProxyLock(Object lock) {

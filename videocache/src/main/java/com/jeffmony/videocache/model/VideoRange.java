@@ -19,6 +19,10 @@ public class VideoRange {
         return mEnd;
     }
 
+    public boolean contains(long position) {
+        return mStart <= position && position <= mEnd;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

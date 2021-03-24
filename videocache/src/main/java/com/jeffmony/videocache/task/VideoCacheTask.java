@@ -73,11 +73,11 @@ public abstract class VideoCacheTask {
         mListener.onVideoSeekComplete();
     }
 
-    public boolean isTaskRunning() {
+    protected boolean isTaskRunning() {
         return mTaskExecutor != null && !mTaskExecutor.isShutdown();
     }
 
-    public boolean isTaskShutdown() {
+    protected boolean isTaskShutdown() {
         return mTaskExecutor != null && mTaskExecutor.isShutdown();
     }
 

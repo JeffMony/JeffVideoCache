@@ -48,8 +48,21 @@ public class Mp4VideoCacheThread implements Runnable {
         }
     }
 
+    public boolean isRunning() {
+        return mIsRunning;
+    }
+
     public void pause() {
+        LogUtils.i(TAG, "Mp4VideoCacheThread ====> PAUSE");
         mIsRunning = false;
+    }
+
+    public boolean isPositionContained(long position) {
+        return mRequestRange != null ? mRequestRange.contains(position) : false;
+    }
+
+    public long getRangeEndPosition() {
+        return mRequestRange != null ? mRequestRange.getEnd() : 0L;
     }
 
     @Override

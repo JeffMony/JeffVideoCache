@@ -9,6 +9,7 @@ import com.jeffmony.videocache.socket.request.ContentType;
 import com.jeffmony.videocache.socket.request.HttpRequest;
 import com.jeffmony.videocache.socket.request.IState;
 import com.jeffmony.videocache.socket.request.Method;
+import com.jeffmony.videocache.socket.request.ResponseState;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
 
 import java.io.BufferedWriter;
@@ -25,6 +26,9 @@ import java.util.TimeZone;
 public abstract class BaseResponse {
     private static final String TAG = "BaseResponse";
     protected static String CONTENT_TYPE = "Content-Type";
+    protected static String CONTENT_LENGTH = "Content-Length";
+    protected static String CONTENT_RANGE = "Content-Range";
+    protected static String ACCEPT_RANGES = "Accept-Ranges";
     protected static String DATE = "Date";
     protected static String CONNECTION = "Connection";
     protected static String TRANSFER_ENCODING = "Transfer-Encoding";
@@ -40,6 +44,8 @@ public abstract class BaseResponse {
     protected final String mMimeType;
     protected final String mProtocolVersion;
     protected IState mResponseState;
+    protected long mTotalSize;
+    protected long mStartPosition;
 
     public BaseResponse(HttpRequest request, String videoUrl, Map<String, String> headers, long time) {
         mRequest = request;
@@ -73,7 +79,13 @@ public abstract class BaseResponse {
             if (mRequest.requestMethod() != Method.HEAD) {
                 appendHeader(pw, TRANSFER_ENCODING, "chunked");
             }
+            if (mResponseState == ResponseState.PARTIAL_CONTENT) {
+                long contentLength = mTotalSize - mStartPosition + 1;
+                appendHeader(pw, CONTENT_LENGTH, String.valueOf(contentLength));
 
+                String contentRange = String.format("bytes %s-%s/%s", String.valueOf(mStartPosition), String.valueOf(mTotalSize), String.valueOf(mTotalSize));
+                appendHeader(pw, CONTENT_RANGE, contentRange);
+            }
             pw.append("\r\n");
             pw.flush();
             sendBodyWithCorrectTransferAndEncoding(socket, outputStream);
