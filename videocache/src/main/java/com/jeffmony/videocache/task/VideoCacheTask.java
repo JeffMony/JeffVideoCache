@@ -69,10 +69,6 @@ public abstract class VideoCacheTask {
         mListener.onTaskCompleted(mTotalSize);
     }
 
-    protected void notifyOnVideoSeekComplete() {
-        mListener.onVideoSeekComplete();
-    }
-
     protected boolean isTaskRunning() {
         return mTaskExecutor != null && !mTaskExecutor.isShutdown();
     }
