@@ -1,4 +1,4 @@
 include ':playersdk'
 include ':videocache'
 include ':app'
-rootProject.name = "AndroidVideoCache"
+rootProject.name = "JeffVideoCache"
