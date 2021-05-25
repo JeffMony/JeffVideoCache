@@ -10,7 +10,7 @@
         android:layout_margin="20dp">
         
         <EditText
-            android:text="https://iqiyi.zuidameiju.com/20200227/12397_4c680974/index.m3u8"
+            android:text="https://vod3.buycar5.cn/20210518/8cmhKGwX/index.m3u8"
             android:id="@+id/video_url_edit_text"
             android:textColor="@color/black"
             android:textSize="18sp"

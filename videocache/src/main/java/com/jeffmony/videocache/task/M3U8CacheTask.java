@@ -112,6 +112,7 @@ public class M3U8CacheTask extends VideoCacheTask {
 
     @Override
     public void seekToCacheTaskFromClient(float percent) {
+        pauseCacheTask();
         int seekTsIndex = (int)(percent * mTotalSegCount);
         startRequestVideoRange(seekTsIndex);
     }

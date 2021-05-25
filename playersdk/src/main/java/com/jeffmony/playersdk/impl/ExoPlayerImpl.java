@@ -142,11 +142,11 @@ public class ExoPlayerImpl extends BasePlayerImpl {
     }
 
     @Override
-    public void seekTo(long msec) throws IllegalStateException {
+    public void seekTo(long position) throws IllegalStateException {
         if (mPlayerSettings.getLocalProxyEnable()) {
-            mLocalProxyVideoControl.seekToCachePosition(msec);
+            mLocalProxyVideoControl.seekToCachePosition(position);
         }
-        mExoPlayer.seekTo(msec);
+        mExoPlayer.seekTo(position);
     }
 
     private void initPlayerListener() {
