@@ -28,6 +28,7 @@ import java.util.Map;
 public class M3U8SegResponse extends BaseResponse {
 
     private static final String TAG = "M3U8SegResponse";
+    private String mParentUrl;
     private File mSegFile;
     private String mSegUrl;
     private String mM3U8Md5;    //对应M3U8 url的md5值
@@ -35,8 +36,9 @@ public class M3U8SegResponse extends BaseResponse {
     private long mSegLength;
     private String mFileName;
 
-    public M3U8SegResponse(HttpRequest request, String videoUrl, Map<String, String> headers, long time, String fileName) throws Exception {
+    public M3U8SegResponse(HttpRequest request, String parentUrl, String videoUrl, Map<String, String> headers, long time, String fileName) throws Exception {
         super(request, videoUrl, headers, time);
+        mParentUrl = parentUrl;
         mSegUrl = videoUrl;
         mSegFile = new File(mCachePath, fileName);
         LogUtils.i(TAG, "SegFilePath="+mSegFile.getAbsolutePath());
@@ -48,6 +50,8 @@ public class M3U8SegResponse extends BaseResponse {
         mHeaders.put("Connection", "close");
         mSegIndex = getSegIndex(fileName);
         mResponseState = ResponseState.OK;
+        LogUtils.i(TAG, "index="+mSegIndex+", parentUrl="+mParentUrl+", segUrl="+mSegUrl);
+        VideoProxyCacheManager.getInstance().seekToCacheTaskFromServer(mParentUrl, mSegIndex);
     }
 
     private String getM3U8Md5(String str) throws VideoCacheException {

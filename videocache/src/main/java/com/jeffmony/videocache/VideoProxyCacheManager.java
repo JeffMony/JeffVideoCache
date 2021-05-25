@@ -466,6 +466,8 @@ public class VideoProxyCacheManager {
      * 服务端调用到客户端的通知, 这儿可以精确确定客户端应该从什么地方开始seek
      *
      * 从服务端调用过来, 肯定不是主线程, 所以要切换到主线程
+     *
+     * 这是针对非M3U8视频的
      * @param url
      * @param startPosition
      */
@@ -487,6 +489,29 @@ public class VideoProxyCacheManager {
             VideoCacheTask cacheTask = mCacheTaskMap.get(url);
             if (cacheTask != null && seekByServer) {
                 cacheTask.seekToCacheTaskFromServer(startPosition);
+            }
+        });
+    }
+
+    /**
+     * 针对M3U8视频,从服务端传入分片索引到客户端来
+     * @param url
+     * @param segIndex
+     */
+    public void seekToCacheTaskFromServer(String url, int segIndex) {
+        String md5 = ProxyCacheUtils.computeMD5(url);
+        boolean shouldSeek = false;
+        synchronized (mSeekPositionLock) {
+            if (mVideoSeekMd5PositionMap.containsKey(md5)) {
+                mVideoSeekMd5PositionMap.remove(md5);
+                shouldSeek = true;
+            }
+        }
+        final boolean seekByServer = shouldSeek;
+        VideoProxyThreadUtils.runOnUiThread(() -> {
+            VideoCacheTask cacheTask = mCacheTaskMap.get(url);
+            if (cacheTask != null && seekByServer) {
+                cacheTask.seekToCacheTaskFromServer(segIndex);
             }
         });
     }

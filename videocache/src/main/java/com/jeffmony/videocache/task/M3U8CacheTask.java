@@ -112,13 +112,17 @@ public class M3U8CacheTask extends VideoCacheTask {
 
     @Override
     public void seekToCacheTaskFromClient(float percent) {
-        pauseCacheTask();
-        int seekTsIndex = (int)(percent * mTotalSegCount);
-        startRequestVideoRange(seekTsIndex);
     }
 
     @Override
     public void seekToCacheTaskFromServer(long startPosition) {
+    }
+
+    @Override
+    public void seekToCacheTaskFromServer(int segIndex) {
+        LogUtils.i(TAG, "seekToCacheTaskFromServer segIndex="+segIndex);
+        pauseCacheTask();
+        startRequestVideoRange(segIndex);
     }
 
     private void startRequestVideoRange(int curTs) {
@@ -147,6 +151,7 @@ public class M3U8CacheTask extends VideoCacheTask {
     }
 
     private void startDownloadSegTask(M3U8Seg seg) throws Exception {
+        LogUtils.i(TAG, "startDownloadSegTask index="+seg.getSegIndex()+", url="+seg.getUrl());
         if (seg.hasInitSegment()) {
             String initSegmentName = seg.getInitSegmentName();
             File initSegmentFile = new File(mSaveDir, initSegmentName);

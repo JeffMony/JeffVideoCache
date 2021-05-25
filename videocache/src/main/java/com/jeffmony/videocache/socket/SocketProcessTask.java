@@ -79,15 +79,16 @@ public class SocketProcessTask implements Runnable {
                 } else if (url.contains(ProxyCacheUtils.SEG_PROXY_SPLIT_STR)) {
                     //说明是M3U8 ts格式的文件
                     String[] videoInfoArr = url.split(ProxyCacheUtils.SEG_PROXY_SPLIT_STR);
-                    if (videoInfoArr.length < 3) {
+                    if (videoInfoArr.length < 4) {
                         throw new VideoCacheException("Local Socket for M3U8 ts file Error Argument");
                     }
-                    String videoUrl = videoInfoArr[0];
-                    String fileName = videoInfoArr[1];
-                    String videoHeaders = videoInfoArr[2];
+                    String parentUrl = videoInfoArr[0];
+                    String videoUrl = videoInfoArr[1];
+                    String fileName = videoInfoArr[2];
+                    String videoHeaders = videoInfoArr[3];
                     Map<String, String> headers = ProxyCacheUtils.str2Map(videoHeaders);
-                    LogUtils.d(TAG, videoUrl + "\n" + fileName + "\n" + videoHeaders);
-                    response = new M3U8SegResponse(request, url, headers, currentTime, fileName);
+                    LogUtils.d(TAG, parentUrl + "\n" + videoUrl + "\n" + fileName + "\n" + videoHeaders);
+                    response = new M3U8SegResponse(request, parentUrl, videoUrl, headers, currentTime, fileName);
                     response.sendResponse(mSocket, outputStream);
                 } else {
                     throw new VideoCacheException("Local Socket Error url");

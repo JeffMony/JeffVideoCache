@@ -38,14 +38,14 @@ public class M3U8Utils {
      * @return
      * @throws IOException
      */
-    public static M3U8 parseNetworkM3U8Info(String videoUrl, Map<String, String> headers, int retryCount) throws IOException {
+    public static M3U8 parseNetworkM3U8Info(String parentUrl, String videoUrl, Map<String, String> headers, int retryCount) throws IOException {
         InputStreamReader inputStreamReader = null;
         BufferedReader bufferedReader = null;
         try {
             HttpURLConnection connection = HttpUtils.getConnection(videoUrl, headers);
             int responseCode = connection.getResponseCode();
             if (responseCode == HttpUtils.RESPONSE_503 && retryCount < HttpUtils.MAX_RETRY_COUNT) {
-                return parseNetworkM3U8Info(videoUrl, headers, retryCount + 1);
+                return parseNetworkM3U8Info(parentUrl, videoUrl, headers, retryCount + 1);
             }
             bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 
@@ -135,7 +135,7 @@ public class M3U8Utils {
                 // It has '#EXT-X-STREAM-INF' tag;
                 if (hasMasterList) {
                     String tempUrl = UrlUtils.getM3U8MasterUrl(videoUrl, line);
-                    return parseNetworkM3U8Info(tempUrl, headers, retryCount);
+                    return parseNetworkM3U8Info(parentUrl, tempUrl, headers, retryCount);
                 }
 
                 if (Math.abs(segDuration) < 0.001f) {
@@ -143,6 +143,7 @@ public class M3U8Utils {
                 }
 
                 M3U8Seg seg = new M3U8Seg();
+                seg.setParentUrl(parentUrl);
                 String tempUrl = UrlUtils.getM3U8MasterUrl(videoUrl, line);
                 seg.setUrl(tempUrl);
                 seg.setSegIndex(segIndex);

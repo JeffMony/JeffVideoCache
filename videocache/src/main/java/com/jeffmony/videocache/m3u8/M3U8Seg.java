@@ -15,6 +15,7 @@ import java.util.Map;
  * M3U8文件中TS文件的结构
  */
 public class M3U8Seg implements Comparable<M3U8Seg> {
+    private String mParentUrl;             //分片的上级M3U8的url
     private String mUrl;                   //分片的网络url
     private String mName;                  //分片的文件名
     private float mDuration;               //分片的时长
@@ -31,13 +32,15 @@ public class M3U8Seg implements Comparable<M3U8Seg> {
     private String mInitSegmentUri;        //MAP的url
     private String mSegmentByteRange;      //MAP的range
 
+    public void setParentUrl(String parentUrl) { mParentUrl = parentUrl; }
+
+    public String getParentUrl() { return mParentUrl; }
+
     public String getUrl() {
         return mUrl;
     }
 
-    public void setUrl(String url) {
-        mUrl = url;
-    }
+    public void setUrl(String url) { mUrl = url; }
 
     public String getName() {
         return mName;
@@ -173,12 +176,12 @@ public class M3U8Seg implements Comparable<M3U8Seg> {
 
     public String getInitSegProxyUrl(String md5, Map<String, String> headers) {
         //三个字符串
-        //1.init Seg的url
-        //2.init Seg存储的位置
-        //3.init Seg url对应的请求headers
-        String proxyExtraInfo = mInitSegmentUri + ProxyCacheUtils.SEG_PROXY_SPLIT_STR +
-                File.separator + md5 + File.separator + getInitSegmentName() +
-                ProxyCacheUtils.SEG_PROXY_SPLIT_STR + ProxyCacheUtils.map2Str(headers);
+        //1.parent url
+        //2.init Seg的url
+        //3.init Seg存储的位置
+        //4.init Seg url对应的请求headers
+        String proxyExtraInfo = mParentUrl + ProxyCacheUtils.SEG_PROXY_SPLIT_STR + mInitSegmentUri + ProxyCacheUtils.SEG_PROXY_SPLIT_STR +
+                File.separator + md5 + File.separator + getInitSegmentName() + ProxyCacheUtils.SEG_PROXY_SPLIT_STR + ProxyCacheUtils.map2Str(headers);
         String proxyUrl = String.format(Locale.US, "http://%s:%d/%s", ProxyCacheUtils.LOCAL_PROXY_HOST,
                 ProxyCacheUtils.getLocalPort(), ProxyCacheUtils.encodeUriWithBase64(proxyExtraInfo));
         return proxyUrl;
@@ -186,12 +189,12 @@ public class M3U8Seg implements Comparable<M3U8Seg> {
 
     public String getSegProxyUrl(String md5, Map<String, String> headers) {
         //三个字符串
-        //1.Seg的url
-        //2.Seg存储的位置
-        //3.Seg url对应的请求headers
-        String proxyExtraInfo = mUrl + ProxyCacheUtils.SEG_PROXY_SPLIT_STR +
-                File.separator + md5 + File.separator + getSegName() +
-                ProxyCacheUtils.SEG_PROXY_SPLIT_STR + ProxyCacheUtils.map2Str(headers);
+        //1.parent url
+        //2.Seg的url
+        //3.Seg存储的位置
+        //4.Seg url对应的请求headers
+        String proxyExtraInfo = mParentUrl + ProxyCacheUtils.SEG_PROXY_SPLIT_STR + mUrl + ProxyCacheUtils.SEG_PROXY_SPLIT_STR +
+                File.separator + md5 + File.separator + getSegName() + ProxyCacheUtils.SEG_PROXY_SPLIT_STR + ProxyCacheUtils.map2Str(headers);
         String proxyUrl = String.format(Locale.US, "http://%s:%d/%s", ProxyCacheUtils.LOCAL_PROXY_HOST,
                 ProxyCacheUtils.getLocalPort(), ProxyCacheUtils.encodeUriWithBase64(proxyExtraInfo));
         return proxyUrl;

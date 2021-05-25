@@ -53,7 +53,9 @@ public abstract class VideoCacheTask {
 
     public abstract void seekToCacheTaskFromClient(float percent);        //来自客户端的seek操作
 
-    public abstract void seekToCacheTaskFromServer(long startPosition);    //来自服务端的seek操作
+    public abstract void seekToCacheTaskFromServer(long startPosition);   //来自服务端的seek操作,针对非M3U8视频
+
+    public abstract void seekToCacheTaskFromServer(int segIndex);         //来自服务端的seek操作,针对M3U8视频
 
     public abstract void resumeCacheTask();
 

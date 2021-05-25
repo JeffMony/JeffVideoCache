@@ -116,7 +116,7 @@ public class VideoInfoParseManager {
     private void parseNetworkM3U8Info(VideoCacheInfo cacheInfo) {
 
         try {
-            M3U8 m3u8 = M3U8Utils.parseNetworkM3U8Info(cacheInfo.getVideoUrl(), mHeaders, 0);
+            M3U8 m3u8 = M3U8Utils.parseNetworkM3U8Info(cacheInfo.getVideoUrl(), cacheInfo.getVideoUrl(), mHeaders, 0);
 
             if (m3u8.isIsLive()) {
                 //说明M3U8是直播
