@@ -5,10 +5,11 @@ import android.media.AudioManager;
 import android.net.Uri;
 import android.view.Surface;
 
+import com.jeffmony.videocache.utils.ProxyCacheUtils;
+
 import java.io.IOException;
 import java.util.Map;
 
-import tv.danmaku.ijk.media.player.IMediaPlayer;
 import tv.danmaku.ijk.media.player.IjkMediaPlayer;
 
 public class IjkPlayerImpl extends BasePlayerImpl {
@@ -43,7 +44,15 @@ public class IjkPlayerImpl extends BasePlayerImpl {
 
     @Override
     public void setDataSource(Context context, Uri uri, Map<String, String> headers) throws IllegalArgumentException, SecurityException, IllegalStateException, IOException {
-        mIjkPlayer.setDataSource(context, uri, headers);
+        String playUrl;
+        if (mPlayerSettings.getLocalProxyEnable()) {
+            playUrl = ProxyCacheUtils.getProxyUrl(uri.toString(), null, null);
+            //请求放在客户端,非常便于控制
+            mLocalProxyVideoControl.startRequestVideoInfo(uri.toString(), null, null);
+        } else {
+            playUrl = uri.toString();
+        }
+        mIjkPlayer.setDataSource(context, Uri.parse(playUrl), headers);
     }
 
     @Override
@@ -58,6 +67,9 @@ public class IjkPlayerImpl extends BasePlayerImpl {
 
     @Override
     public void start() throws IllegalStateException {
+        if (mPlayerSettings.getLocalProxyEnable()) {
+            mLocalProxyVideoControl.resumeLocalProxyTask();
+        }
         mIjkPlayer.start();
     }
 
@@ -68,6 +80,9 @@ public class IjkPlayerImpl extends BasePlayerImpl {
 
     @Override
     public void pause() throws IllegalStateException {
+        if (mPlayerSettings.getLocalProxyEnable()) {
+            mLocalProxyVideoControl.pauseLocalProxyTask();
+        }
         mIjkPlayer.pause();
     }
 
@@ -83,6 +98,9 @@ public class IjkPlayerImpl extends BasePlayerImpl {
 
     @Override
     public long getBufferedPosition() {
+        if (mPlayerSettings.getLocalProxyEnable()) {
+            return (long) (mProxyCachePercent * mIjkPlayer.getDuration() / 100);
+        }
         return 0;
     }
 
@@ -103,47 +121,35 @@ public class IjkPlayerImpl extends BasePlayerImpl {
 
     @Override
     public void release() {
+        if (mPlayerSettings.getLocalProxyEnable()) {
+            mLocalProxyVideoControl.releaseLocalProxyResources();
+        }
         mIjkPlayer.release();
     }
 
     @Override
-    public void seekTo(long msec) throws IllegalStateException {
-        mIjkPlayer.seekTo(msec);
+    public void seekTo(long position) throws IllegalStateException {
+        if (mPlayerSettings.getLocalProxyEnable()) {
+            mLocalProxyVideoControl.seekToCachePosition(position);
+        }
+        mIjkPlayer.seekTo(position);
     }
 
-    private IjkMediaPlayer.OnPreparedListener mOnPreparedListener = new IjkMediaPlayer.OnPreparedListener() {
+    private IjkMediaPlayer.OnPreparedListener mOnPreparedListener = mp -> notifyOnPrepared();
 
-        @Override
-        public void onPrepared(IMediaPlayer mp) {
-            notifyOnPrepared();
+    private IjkMediaPlayer.OnVideoSizeChangedListener mOnVideoSizeChangedListener = (mp, width, height, sar_num, sar_den) -> notifyOnVideoSizeChanged(width, height, sar_num, sar_den, 0);
+
+    private IjkMediaPlayer.OnVideoDarSizeChangedListener mOnVideoDarSizeChangedListener = (mp, width, height, sar_num, sar_den, dar_num, dar_den) -> {
+        float pixelRatio = sar_num * 1.0f / sar_den;
+        if (Float.compare(pixelRatio, Float.NaN) == 0) {
+            pixelRatio = 1.0f;
         }
-
+        float darRatio = dar_num * 1.0f / dar_den;
+        notifyOnVideoSizeChanged(width, height, 0, pixelRatio, darRatio);
     };
 
-    private IjkMediaPlayer.OnVideoSizeChangedListener mOnVideoSizeChangedListener = new IjkMediaPlayer.OnVideoSizeChangedListener() {
-        @Override
-        public void onVideoSizeChanged(IMediaPlayer mp, int width, int height, int sar_num, int sar_den) {
-            notifyOnVideoSizeChanged(width, height, sar_num, sar_den, 0);
-        }
-    };
-
-    private IjkMediaPlayer.OnVideoDarSizeChangedListener mOnVideoDarSizeChangedListener = new IjkMediaPlayer.OnVideoDarSizeChangedListener() {
-        @Override
-        public void onVideoSizeChanged(IMediaPlayer mp, int width, int height, int sar_num, int sar_den, int dar_num, int dar_den) {
-            float pixelRatio = sar_num * 1.0f / sar_den;
-            if (Float.compare(pixelRatio, Float.NaN) == 0) {
-                pixelRatio = 1.0f;
-            }
-            float darRatio = dar_num * 1.0f / dar_den;
-            notifyOnVideoSizeChanged(width, height, 0, pixelRatio, darRatio);
-        }
-    };
-
-    private IjkMediaPlayer.OnErrorListener mOnErrorListener = new IjkMediaPlayer.OnErrorListener() {
-        @Override
-        public boolean onError(IMediaPlayer mp, int what, int extra) {
-            notifyOnError(what, "" + extra);
-            return true;
-        }
+    private IjkMediaPlayer.OnErrorListener mOnErrorListener = (mp, what, extra) -> {
+        notifyOnError(what, "" + extra);
+        return true;
     };
 }

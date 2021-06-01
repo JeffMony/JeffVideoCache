@@ -19,8 +19,33 @@
             android:lines="4"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
+
+        <RadioGroup
+            android:id="@+id/player_group"
+            android:layout_marginTop="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+            <RadioButton
+                android:checked="true"
+                android:id="@+id/exo_play_btn"
+                android:textSize="18sp"
+                android:text="Exo播放器"
+                android:layout_weight="1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <RadioButton
+                android:id="@+id/ijk_play_btn"
+                android:textSize="18sp"
+                android:text="Ijk播放器"
+                android:layout_weight="1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </RadioGroup>
         
         <Button
+            android:layout_marginTop="10dp"
             android:id="@+id/video_play_btn"
             android:textSize="25sp"
             android:padding="20dp"

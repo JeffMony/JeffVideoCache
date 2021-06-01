@@ -21,6 +21,7 @@ import androidx.annotation.Nullable;
 import com.jeffmony.playersdk.IPlayer;
 import com.jeffmony.playersdk.JeffPlayer;
 import com.jeffmony.playersdk.common.PlayerSettings;
+import com.jeffmony.playersdk.common.PlayerType;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.TimeUtils;
 
@@ -34,6 +35,7 @@ public class VideoPlayActivity extends Activity {
     private final static int MAX_PROGRESS = 1000;
 
     private String mVideoUrl;
+    private int mPlayerType;
     private Surface mSurface;
     private JeffPlayer mPlayer;
     private Size mScreenSize;
@@ -67,6 +69,7 @@ public class VideoPlayActivity extends Activity {
 
         mVideoUrl = getIntent().getStringExtra("video_url");
         mLocalProxyEnable = getIntent().getBooleanExtra("local_proxy_enable", false);
+        mPlayerType = getIntent().getIntExtra("player_type", 1);
 
         mVideoView = findViewById(R.id.video_textureview);
         mProgressView = findViewById(R.id.video_progress_view);
@@ -98,7 +101,11 @@ public class VideoPlayActivity extends Activity {
     };
 
     private void initPlayerSettings() {
-        mPlayer = new JeffPlayer(this.getApplicationContext());
+        if (mPlayerType == 1) {
+            mPlayer = new JeffPlayer(this.getApplicationContext(), PlayerType.EXO_PLAYER);
+        } else {
+            mPlayer = new JeffPlayer(this.getApplicationContext(), PlayerType.IJK_PLAYER);
+        }
         PlayerSettings playerSettings = new PlayerSettings();
         playerSettings.setLocalProxyEnable(mLocalProxyEnable);
         mPlayer.initPlayerSettings(playerSettings);
