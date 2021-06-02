@@ -99,7 +99,7 @@ public class M3U8SegResponse extends BaseResponse {
                     break;
                 }
             }
-            LogUtils.d(TAG, "FilePath=" + mSegFile.getAbsolutePath() + ", FileLength=" + mSegFile.length() + ", segLength=" + mSegLength);
+            LogUtils.d(TAG,  "FileLength=" + mSegFile.length() + ", segLength=" + mSegLength + ", FilePath=" + mSegFile.getAbsolutePath());
         }
         RandomAccessFile randomAccessFile = null;
 
