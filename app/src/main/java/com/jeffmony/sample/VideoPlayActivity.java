@@ -22,6 +22,7 @@ import com.jeffmony.playersdk.IPlayer;
 import com.jeffmony.playersdk.JeffPlayer;
 import com.jeffmony.playersdk.common.PlayerSettings;
 import com.jeffmony.playersdk.common.PlayerType;
+import com.jeffmony.playersdk.common.SeekType;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.TimeUtils;
 
@@ -106,6 +107,7 @@ public class VideoPlayActivity extends Activity {
         } else {
             mPlayer = new JeffPlayer(this.getApplicationContext(), PlayerType.IJK_PLAYER);
         }
+        mPlayer.setSeekType(SeekType.CLOSEST_SYNC);
         PlayerSettings playerSettings = new PlayerSettings();
         playerSettings.setLocalProxyEnable(mLocalProxyEnable);
         mPlayer.initPlayerSettings(playerSettings);

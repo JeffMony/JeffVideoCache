@@ -5,6 +5,7 @@ import android.media.AudioManager;
 import android.net.Uri;
 import android.view.Surface;
 
+import com.jeffmony.playersdk.common.SeekType;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
 
 import java.io.IOException;
@@ -53,6 +54,15 @@ public class IjkPlayerImpl extends BasePlayerImpl {
             playUrl = uri.toString();
         }
         mIjkPlayer.setDataSource(context, Uri.parse(playUrl), headers);
+    }
+
+    @Override
+    public void setSeekType(SeekType type) {
+        if (type == SeekType.EXACT_SYNC) {
+            mIjkPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_PLAYER, "enable-accurate-seek", 1);
+        } else {
+            mIjkPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_PLAYER, "enable-accurate-seek", 0);
+        }
     }
 
     @Override

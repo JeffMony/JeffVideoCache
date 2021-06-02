@@ -8,6 +8,7 @@ import androidx.annotation.NonNull;
 
 import com.jeffmony.playersdk.IPlayer;
 import com.jeffmony.playersdk.common.PlayerSettings;
+import com.jeffmony.playersdk.common.SeekType;
 import com.jeffmony.playersdk.control.LocalProxyVideoControl;
 import com.jeffmony.videocache.common.ProxyMessage;
 import com.jeffmony.videocache.common.VideoParams;
@@ -42,6 +43,8 @@ public abstract class BasePlayerImpl {
 
     public abstract void setDataSource(Context context, Uri uri, Map<String, String> headers)
             throws IOException, IllegalArgumentException, SecurityException, IllegalStateException;
+
+    public abstract void setSeekType(SeekType type);
 
     public abstract void setSurface(Surface surface);
 

@@ -5,6 +5,7 @@ import android.net.Uri;
 import android.view.Surface;
 
 import com.jeffmony.playersdk.common.PlayerSettings;
+import com.jeffmony.playersdk.common.SeekType;
 
 import java.io.IOException;
 import java.util.Map;
@@ -15,6 +16,8 @@ public interface IPlayer {
 
     void setDataSource(Context context, Uri uri, Map<String, String> headers)
             throws IOException, IllegalArgumentException, SecurityException, IllegalStateException;
+
+    void setSeekType(SeekType type);
 
     void setSurface(Surface surface);
 

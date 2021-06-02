@@ -9,6 +9,7 @@ import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.Format;
 import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
+import com.google.android.exoplayer2.SeekParameters;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.ProgressiveMediaSource;
@@ -23,6 +24,7 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
 import com.google.android.exoplayer2.video.VideoListener;
+import com.jeffmony.playersdk.common.SeekType;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
 
@@ -60,6 +62,19 @@ public class ExoPlayerImpl extends BasePlayerImpl {
             playUrl = uri.toString();
         }
         mMediaSource = createMediaSource(Uri.parse(playUrl), null);
+    }
+
+    @Override
+    public void setSeekType(SeekType type) {
+        if (type == SeekType.CLOSEST_SYNC) {
+            mExoPlayer.setSeekParameters(SeekParameters.CLOSEST_SYNC);
+        } else if (type == SeekType.EXACT_SYNC) {
+            mExoPlayer.setSeekParameters(SeekParameters.EXACT);
+        } else if (type == SeekType.PREVIOUS_SYNC) {
+            mExoPlayer.setSeekParameters(SeekParameters.PREVIOUS_SYNC);
+        } else {
+            mExoPlayer.setSeekParameters(SeekParameters.NEXT_SYNC);
+        }
     }
 
     @Override

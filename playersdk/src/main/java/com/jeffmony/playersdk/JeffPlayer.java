@@ -6,6 +6,7 @@ import android.view.Surface;
 
 import com.jeffmony.playersdk.common.PlayerSettings;
 import com.jeffmony.playersdk.common.PlayerType;
+import com.jeffmony.playersdk.common.SeekType;
 import com.jeffmony.playersdk.impl.BasePlayerImpl;
 import com.jeffmony.playersdk.impl.ExoPlayerImpl;
 import com.jeffmony.playersdk.impl.IjkPlayerImpl;
@@ -37,6 +38,11 @@ public class JeffPlayer implements IPlayer {
     @Override
     public void setDataSource(Context context, Uri uri, Map<String, String> headers) throws IOException, IllegalArgumentException, SecurityException, IllegalStateException {
         mPlayerImpl.setDataSource(context, uri, headers);
+    }
+
+    @Override
+    public void setSeekType(SeekType type) {
+        mPlayerImpl.setSeekType(type);
     }
 
     @Override
