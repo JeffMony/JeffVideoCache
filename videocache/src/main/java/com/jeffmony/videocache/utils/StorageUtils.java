@@ -1,6 +1,5 @@
 package com.jeffmony.videocache.utils;
 
-import android.Manifest;
 import android.content.Context;
 
 import com.jeffmony.videocache.model.VideoCacheInfo;
