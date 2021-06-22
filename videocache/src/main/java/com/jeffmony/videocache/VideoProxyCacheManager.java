@@ -161,6 +161,9 @@ public class VideoProxyCacheManager {
     public void initProxyConfig(@NonNull VideoCacheConfig config) {
         ProxyCacheUtils.setVideoCacheConfig(config);
         new LocalProxyVideoServer();  //初始化本地代理服务
+
+        //设置缓存清理规则
+        StorageManager.getInstance().initCacheConfig(config.getFilePath(), config.getMaxCacheSize(), config.getExpireTime());
     }
 
     public void addCacheListener(String videoUrl, @NonNull IVideoCacheListener listener) {
@@ -206,6 +209,7 @@ public class VideoProxyCacheManager {
      *                    详情见VideoParams
      */
     public void startRequestVideoInfo(String videoUrl, Map<String, String> headers, Map<String, Object> extraParams) {
+        StorageManager.getInstance().initCacheInfo();
         String md5 = ProxyCacheUtils.computeMD5(videoUrl);
         File saveDir = new File(ProxyCacheUtils.getConfig().getFilePath(), md5);
         if (!saveDir.exists()) {

@@ -2,6 +2,7 @@ package com.jeffmony.videocache.task;
 
 import androidx.annotation.NonNull;
 
+import com.jeffmony.videocache.StorageManager;
 import com.jeffmony.videocache.listener.IVideoCacheTaskListener;
 import com.jeffmony.videocache.model.VideoCacheInfo;
 import com.jeffmony.videocache.utils.StorageUtils;
@@ -64,10 +65,12 @@ public abstract class VideoCacheTask {
     }
 
     protected void notifyOnTaskFailed(Exception e) {
+        StorageManager.getInstance().checkCache(mSaveDir.getAbsolutePath());
         mListener.onTaskFailed(e);
     }
 
     protected void notifyOnTaskCompleted() {
+        StorageManager.getInstance().checkCache(mSaveDir.getAbsolutePath());
         mListener.onTaskCompleted(mTotalSize);
     }
 

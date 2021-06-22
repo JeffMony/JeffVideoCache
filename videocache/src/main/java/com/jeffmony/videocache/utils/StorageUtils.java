@@ -1,5 +1,6 @@
 package com.jeffmony.videocache.utils;
 
+import android.Manifest;
 import android.content.Context;
 
 import com.jeffmony.videocache.model.VideoCacheInfo;
@@ -7,6 +8,7 @@ import com.jeffmony.videocache.model.VideoCacheInfo;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
@@ -68,4 +70,91 @@ public class StorageUtils {
             ProxyCacheUtils.close(fos);
         }
     }
+
+    /**
+     * 清理过期的数据
+     * @param file
+     * @param expiredTime
+     */
+    public static void cleanExpiredCacheData(File file, long expiredTime) throws IOException {
+        if (file == null || !file.exists()) return;
+        File[] listFiles = file.listFiles();
+        if (listFiles == null) return;
+        for (File itemFile : listFiles) {
+            if (isExpiredCacheData(itemFile.lastModified(), expiredTime)) {
+                delete(itemFile);
+            }
+        }
+    }
+
+    private static boolean isExpiredCacheData(long lastModifiedTime, long expiredTime) {
+        long now = System.currentTimeMillis();
+        if (Math.abs(now - lastModifiedTime) > expiredTime) {
+            return true;
+        }
+        return false;
+    }
+
+    private static void delete(File file) throws IOException {
+        if (file.isFile() && file.exists()) {
+            boolean isDeleted = file.delete();
+            if (!isDeleted) {
+                throw new IOException(String.format("File %s cannot be deleted", file.getAbsolutePath()));
+            }
+        }
+    }
+
+    public static boolean deleteFile(File file) {
+        if (file.isDirectory()) {
+            File[] files = file.listFiles();
+            if (files == null) return true;
+            for (File f : files) {
+                if (!f.delete()) return false;
+            }
+            return file.delete();
+        } else {
+            return file.delete();
+        }
+    }
+
+    /**
+     * 获取file目录中所有文件的总大小
+     * @param file
+     * @return
+     */
+    public static long getTotalSize(File file) {
+        if (file.isDirectory()) {
+            long totalSize = 0;
+            File[] files = file.listFiles();
+            if (files == null) return 0;
+            for (File f : files) {
+                totalSize += getTotalSize(f);
+            }
+            return totalSize;
+        } else {
+            return file.length();
+        }
+    }
+
+    public static void setLastModifiedTimeStamp(File file) throws IOException {
+        if (file.exists()) {
+            long now = System.currentTimeMillis();
+            boolean modified = file.setLastModified(now);
+            if (!modified) {
+                modify(file);
+            }
+        }
+    }
+
+    //file是一个目录文件
+    private static void modify(File file) throws IOException {
+        File tempFile = new File(file, "tempFile");
+        if (!tempFile.exists()) {
+            tempFile.createNewFile();
+            tempFile.delete();
+        } else {
+            tempFile.delete();
+        }
+    }
+
 }
