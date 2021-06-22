@@ -1,13 +1,13 @@
 package com.jeffmony.videocache.utils;
 
-import android.annotation.SuppressLint;
+
+import com.jeffmony.videocache.okhttp.CustomTrustManager;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.NoRouteToHostException;
 import java.net.ProtocolException;
 import java.net.URL;
-import java.security.cert.X509Certificate;
 import java.util.Map;
 
 import javax.net.ssl.HostnameVerifier;
@@ -16,7 +16,6 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 
 /**
  * @author jeffmony
@@ -102,22 +101,7 @@ public class HttpUtils {
         try {
             sslContext = SSLContext.getInstance("TLS");
             if (sslContext != null) {
-                sslContext.init(null, new TrustManager[]{new X509TrustManager() {
-                    @SuppressLint("TrustAllX509TrustManager")
-                    @Override
-                    public void checkClientTrusted(X509Certificate[] chain, String authType) {
-                    }
-
-                    @SuppressLint("TrustAllX509TrustManager")
-                    @Override
-                    public void checkServerTrusted(X509Certificate[] chain, String authType) {
-                    }
-
-                    @Override
-                    public X509Certificate[] getAcceptedIssuers() {
-                        return new X509Certificate[0];
-                    }
-                }}, null);
+                sslContext.init(null, new TrustManager[]{new CustomTrustManager()}, null);
             }
         } catch (Exception e) {
             LogUtils.w(TAG,"SSLContext init failed");
