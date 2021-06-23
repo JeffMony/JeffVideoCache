@@ -7,16 +7,19 @@ public class VideoCacheConfig {
     private String mFilePath;      //video cache存储的位置
     private int mReadTimeOut;      //网络读超时
     private int mConnTimeOut;      //网络建连超时
+    private boolean mIgnoreCert;   //是否忽略证书校验
     private int mPort;             //本地代理的端口
     private boolean mUseOkHttp;    //使用okhttp接管网络请求
 
     public VideoCacheConfig(long expireTime, long maxCacheSize, String filePath,
-                            int readTimeOut, int connTimeOut, int port, boolean useOkHttp) {
+                            int readTimeOut, int connTimeOut, boolean ignoreCert,
+                            int port, boolean useOkHttp) {
         mExpireTime = expireTime;
         mMaxCacheSize = maxCacheSize;
         mFilePath = filePath;
         mReadTimeOut = readTimeOut;
         mConnTimeOut = connTimeOut;
+        mIgnoreCert = ignoreCert;
         mPort = port;
         mUseOkHttp = useOkHttp;
     }
@@ -54,4 +57,6 @@ public class VideoCacheConfig {
     }
 
     public boolean useOkHttp() { return mUseOkHttp; }
+
+    public boolean ignoreCert() { return mIgnoreCert; }
 }

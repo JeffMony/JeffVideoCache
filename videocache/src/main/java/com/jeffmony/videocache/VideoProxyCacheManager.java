@@ -124,6 +124,7 @@ public class VideoProxyCacheManager {
         private String mFilePath;
         private int mReadTimeOut = 30 * 1000;
         private int mConnTimeOut = 30 * 1000;
+        private boolean mIgnoreCert;
         private int mPort;
         private boolean mUseOkHttp;
 
@@ -152,6 +153,11 @@ public class VideoProxyCacheManager {
             return this;
         }
 
+        public Builder setIgnoreCert(boolean ignoreCert) {
+            mIgnoreCert = ignoreCert;
+            return this;
+        }
+
         //需要自定义端口号的可以调用这个函数
         public Builder setPort(int port) {
             mPort = port;
@@ -164,10 +170,11 @@ public class VideoProxyCacheManager {
         }
 
         public VideoCacheConfig build() {
-            return new VideoCacheConfig(mExpireTime, mMaxCacheSize, mFilePath, mReadTimeOut, mConnTimeOut, mPort, mUseOkHttp);
+            return new VideoCacheConfig(mExpireTime, mMaxCacheSize, mFilePath, mReadTimeOut, mConnTimeOut, mIgnoreCert, mPort, mUseOkHttp);
         }
     }
 
+    //网络性能数据回调
     private IHttpPipelineListener mHttpPipelineListener = new IHttpPipelineListener() {
         @Override
         public void onRequestStart(String url, String rangeHeader) {
@@ -264,7 +271,7 @@ public class VideoProxyCacheManager {
         ProxyCacheUtils.setVideoCacheConfig(config);
         new LocalProxyVideoServer();  //初始化本地代理服务
 
-        NetworkConfig networkConfig = new NetworkConfig(config.getReadTimeOut(), config.getConnTimeOut(), true);
+        NetworkConfig networkConfig = new NetworkConfig(config.getReadTimeOut(), config.getConnTimeOut(), config.ignoreCert());
         OkHttpManager.getInstance().initConfig(networkConfig, mHttpPipelineListener);
 
         //设置缓存清理规则
