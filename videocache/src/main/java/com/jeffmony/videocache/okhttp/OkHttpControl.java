@@ -8,7 +8,7 @@ import com.jeffmony.videocache.utils.ProxyCacheUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashMap;
+import java.util.Map;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -19,7 +19,7 @@ public class OkHttpControl {
     private static final String TAG = "OkHttpControl";
 
     private String mUrl;
-    private final HashMap<String, String> mHeaders;
+    private final Map<String, String> mHeaders;
     private final long mReadTimeout;
     private final long mConnTimeout;
     private final boolean mIgnoreCert;
@@ -31,7 +31,7 @@ public class OkHttpControl {
     private Request.Builder mRequestBuilder;
     private IHttpPipelineListener mHttpPipelineListener;
 
-    public OkHttpControl(String url, HashMap<String, String> headers, boolean isHeadRequest, @NonNull IHttpPipelineListener listener, @NonNull NetworkConfig config) {
+    public OkHttpControl(String url, Map<String, String> headers, boolean isHeadRequest, @NonNull IHttpPipelineListener listener, @NonNull NetworkConfig config) {
         mUrl = url;
         mHeaders = headers;
         mIsHeadRequest = isHeadRequest;

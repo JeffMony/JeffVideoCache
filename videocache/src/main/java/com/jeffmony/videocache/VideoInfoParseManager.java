@@ -11,6 +11,7 @@ import com.jeffmony.videocache.listener.VideoInfoParsedListener;
 import com.jeffmony.videocache.m3u8.M3U8;
 import com.jeffmony.videocache.m3u8.M3U8Utils;
 import com.jeffmony.videocache.model.VideoCacheInfo;
+import com.jeffmony.videocache.okhttp.OkHttpManager;
 import com.jeffmony.videocache.utils.HttpUtils;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
@@ -57,9 +58,69 @@ public class VideoInfoParseManager {
         mContentType = VideoParamsUtils.getStringValue(extraParams, VideoParams.CONTENT_TYPE);
         mContentLength = VideoParamsUtils.getLongValue(extraParams, VideoParams.CONTENT_LENGTH);
 
-        VideoProxyThreadUtils.submitRunnableTask(() -> parseVideoInfo(cacheInfo));
+        VideoProxyThreadUtils.submitRunnableTask(() -> {
+            if (ProxyCacheUtils.getConfig().useOkHttp()) {
+                parseVideoInfoByOkHttp(cacheInfo);
+            } else {
+                parseVideoInfo(cacheInfo);
+            }
+        });
     }
 
+    //使用okhttp网路框架去请求数据
+    private void parseVideoInfoByOkHttp(VideoCacheInfo cacheInfo) {
+        if (TextUtils.equals(VideoParams.UNKNOWN, mContentType)) {
+            String videoUrl = cacheInfo.getVideoUrl();
+            if (videoUrl.contains("m3u8")) {
+                //这种情况下也基本可以认为video是M3U8类型，虽然判断不太严谨，但是mediaplayer也是这么做的
+                parseNetworkM3U8Info(cacheInfo);
+            } else {
+                Uri videoUri = Uri.parse(videoUrl);
+                String fileName = videoUri.getLastPathSegment();
+                if (!TextUtils.isEmpty(fileName)) {
+                    fileName = fileName.toLowerCase();
+                    if (fileName.endsWith(".m3u8")) {
+                        //当前是M3U8类型
+                        parseNetworkM3U8Info(cacheInfo);
+                    } else {
+                        //不是M3U8类型，说明是整视频
+                        parseNonM3U8VideoInfoByOkHttp(cacheInfo);
+                    }
+                } else {
+                    //需要发起请求判定当前视频的类型
+                    String contentType;
+                    try {
+                        contentType = OkHttpManager.getInstance().getContentType(videoUrl, mHeaders);
+                    } catch (VideoCacheException e) {
+                        mListener.onNonM3U8ParsedFailed(e, cacheInfo);
+                        return;
+                    }
+
+                    if (TextUtils.isEmpty(contentType)) {
+                        mListener.onNonM3U8ParsedFailed(new VideoCacheException("ContentType is null"), cacheInfo);
+                    } else {
+                        contentType = contentType.toLowerCase();
+                        if (ProxyCacheUtils.isM3U8Mimetype(contentType)) {
+                            //当前是M3U8类型
+                            parseNetworkM3U8Info(cacheInfo);
+                        } else {
+                            parseNonM3U8VideoInfoByOkHttp(cacheInfo);
+                        }
+                    }
+                }
+            }
+        } else {
+            if (ProxyCacheUtils.isM3U8Mimetype(mContentType)) {
+                //当前是M3U8类型
+                parseNetworkM3U8Info(cacheInfo);
+            } else {
+                //不是M3U8类型，说明是整视频
+                parseNonM3U8VideoInfoByOkHttp(cacheInfo);
+            }
+        }
+    }
+
+    //使用android原生的HttpURLConnection发起请求
     private void parseVideoInfo(VideoCacheInfo cacheInfo) {
         if (TextUtils.equals(VideoParams.UNKNOWN, mContentType)) {
             String videoUrl = cacheInfo.getVideoUrl();
@@ -111,10 +172,11 @@ public class VideoInfoParseManager {
 
     /**
      * 解析M3U8视频信息
+     *
+     * M3U8类型的请求还是建议使用HttpURLConnection
      * @param cacheInfo
      */
     private void parseNetworkM3U8Info(VideoCacheInfo cacheInfo) {
-
         try {
             M3U8 m3u8 = M3U8Utils.parseNetworkM3U8Info(cacheInfo.getVideoUrl(), cacheInfo.getVideoUrl(), mHeaders, 0);
 
@@ -174,6 +236,29 @@ public class VideoInfoParseManager {
                     mListener.onM3U8ParsedFailed(new VideoCacheException("updateM3U8TsPortInfo failed"), cacheInfo);
                 }
             });
+        }
+    }
+
+    /**
+     * 通过okhttp来请求非M3U8的视频
+     *
+     * 对于一些短视频,还是建议使用okhttp网络请求框架
+     * @param cacheInfo
+     */
+    private void parseNonM3U8VideoInfoByOkHttp(VideoCacheInfo cacheInfo) {
+        cacheInfo.setVideoType(VideoType.OTHER_TYPE);
+        long contentLength;
+
+        try {
+            contentLength = OkHttpManager.getInstance().getContentLength(cacheInfo.getVideoUrl(), mHeaders);
+            if (contentLength > 0) {
+                cacheInfo.setTotalSize(contentLength);
+                mListener.onNonM3U8ParsedFinished(cacheInfo);
+            } else {
+                mListener.onNonM3U8ParsedFailed(new VideoCacheException(""), cacheInfo);
+            }
+        } catch (VideoCacheException e) {
+            mListener.onNonM3U8ParsedFailed(e, cacheInfo);
         }
     }
 

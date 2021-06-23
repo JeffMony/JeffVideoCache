@@ -6,7 +6,6 @@ import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.utils.LogUtils;
 
 import java.io.InputStream;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -44,7 +43,7 @@ public class OkHttpManager {
         mListener = listener;
     }
 
-    public OkHttpControl createOkHttpControl(String url, HashMap<String, String> headers, boolean isHeadRequest) throws VideoCacheException {
+    public OkHttpControl createOkHttpControl(String url, Map<String, String> headers, boolean isHeadRequest) throws VideoCacheException {
         OkHttpControl control = new OkHttpControl(url, headers, isHeadRequest, mListener, mConfig);
         try {
             control.markRequest();
@@ -55,7 +54,7 @@ public class OkHttpManager {
         return control;
     }
 
-    public String getFinalUrl(String url, HashMap<String, String> headers) throws VideoCacheException {
+    public String getFinalUrl(String url, Map<String, String> headers) throws VideoCacheException {
         if (mHttpControlMap.containsKey(url)) {
             OkHttpControl control = mHttpControlMap.get(url);
             if (control != null) {
@@ -79,7 +78,7 @@ public class OkHttpManager {
         return 0;
     }
 
-    public String getContentType(String url, HashMap<String, String> headers) throws VideoCacheException {
+    public String getContentType(String url, Map<String, String> headers) throws VideoCacheException {
         if (mHttpControlMap.containsKey(url)) {
             OkHttpControl control = mHttpControlMap.get(url);
             if (control != null) {
@@ -96,7 +95,7 @@ public class OkHttpManager {
         }
     }
 
-    public long getContentLength(String url, HashMap<String, String> headers) throws VideoCacheException {
+    public long getContentLength(String url, Map<String, String> headers) throws VideoCacheException {
         if (mHttpControlMap.containsKey(url)) {
             OkHttpControl control = mHttpControlMap.get(url);
             if (control != null) {
@@ -113,7 +112,7 @@ public class OkHttpManager {
         }
     }
 
-    public InputStream getResponseBody(String url, HashMap<String, String> headers, @NonNull IFetchResponseListener listener) throws VideoCacheException {
+    public InputStream getResponseBody(String url, Map<String, String> headers, @NonNull IFetchResponseListener listener) throws VideoCacheException {
         OkHttpControl control = createOkHttpControl(url, headers, false);
         mHttpControlMap.put(url, control);
 

@@ -3,6 +3,7 @@ package com.jeffmony.videocache.task;
 import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.listener.IMp4CacheThreadListener;
 import com.jeffmony.videocache.model.VideoRange;
+import com.jeffmony.videocache.okhttp.OkHttpManager;
 import com.jeffmony.videocache.utils.HttpUtils;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
@@ -70,7 +71,74 @@ public class Mp4VideoCacheThread implements Runnable {
         if (!mIsRunning) {
             return;
         }
+        if (ProxyCacheUtils.getConfig().useOkHttp()) {
+            downloadVideoByOkHttp();
+        } else {
+            downloadVideo();
+        }
+    }
 
+    private void downloadVideoByOkHttp() {
+        File videoFile;
+        try {
+            videoFile = new File(mSaveDir, mMd5 + StorageUtils.NON_M3U8_SUFFIX);
+            if (!videoFile.exists()) {
+                videoFile.createNewFile();
+            }
+        } catch (Exception e) {
+            notifyOnCacheFailed(new VideoCacheException("Cannot create video file, exception="+e));
+            return;
+        }
+
+        long requestStart = mRequestRange.getStart();
+        long requestEnd = mRequestRange.getEnd();
+        mHeaders.put("Range", "bytes=" + requestStart + "-" + requestEnd);
+
+        InputStream inputStream = null;
+        RandomAccessFile randomAccessFile = null;
+
+        try {
+            randomAccessFile = new RandomAccessFile(videoFile.getAbsolutePath(), "rw");
+            randomAccessFile.seek(requestStart);
+            long cachedSize = requestStart;
+            LogUtils.i(TAG, "Start request : " + mRequestRange + ", CurrentCachedSize=" + cachedSize);
+            inputStream = OkHttpManager.getInstance().getResponseBody(mVideoUrl, mHeaders, contentLength -> {
+                LogUtils.i(TAG, "getResponseBody--->FetchContentLength: " + contentLength);
+            });
+            LogUtils.i(TAG, "Receive response");
+            byte[] buffer = new byte[StorageUtils.DEFAULT_BUFFER_SIZE];
+            int readLength;
+            while(mIsRunning && (readLength = inputStream.read(buffer)) != -1) {
+                if (cachedSize >= requestEnd) {
+                    cachedSize = requestEnd;
+                }
+                if (cachedSize + readLength > requestEnd) {
+                    long read = requestEnd - cachedSize;
+                    randomAccessFile.write(buffer, 0, (int)read);
+                    cachedSize = requestEnd;
+                } else {
+                    randomAccessFile.write(buffer, 0, readLength);
+                    cachedSize += readLength;
+                }
+
+                notifyOnCacheProgress(cachedSize);
+
+                if (cachedSize >= requestEnd) {
+                    //缓存好了一段,开始缓存下一段
+                    notifyOnCacheRangeCompleted();
+                }
+            }
+            mIsRunning = false;
+        } catch (Exception e) {
+            notifyOnCacheFailed(e);
+        } finally {
+            mIsRunning = false;
+            ProxyCacheUtils.close(inputStream);
+            ProxyCacheUtils.close(randomAccessFile);
+        }
+    }
+
+    private void downloadVideo() {
         File videoFile;
         try {
             videoFile = new File(mSaveDir, mMd5 + StorageUtils.NON_M3U8_SUFFIX);

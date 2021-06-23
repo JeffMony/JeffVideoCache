@@ -23,7 +23,9 @@ import com.jeffmony.playersdk.JeffPlayer;
 import com.jeffmony.playersdk.common.PlayerSettings;
 import com.jeffmony.playersdk.common.PlayerType;
 import com.jeffmony.playersdk.common.SeekType;
+import com.jeffmony.videocache.VideoProxyCacheManager;
 import com.jeffmony.videocache.utils.LogUtils;
+import com.jeffmony.videocache.utils.ProxyCacheUtils;
 import com.jeffmony.videocache.utils.TimeUtils;
 
 public class VideoPlayActivity extends Activity {
@@ -43,6 +45,7 @@ public class VideoPlayActivity extends Activity {
     private int mVideoWidth;
     private int mVideoHeight;
     private boolean mLocalProxyEnable;
+    private boolean mUseOkHttpEnable;
 
     private TextureView mVideoView;
     private SeekBar mProgressView;
@@ -70,7 +73,10 @@ public class VideoPlayActivity extends Activity {
 
         mVideoUrl = getIntent().getStringExtra("video_url");
         mLocalProxyEnable = getIntent().getBooleanExtra("local_proxy_enable", false);
+        mUseOkHttpEnable = getIntent().getBooleanExtra("use_okttp_enable", false);
         mPlayerType = getIntent().getIntExtra("player_type", 1);
+
+        ProxyCacheUtils.getConfig().setUseOkHttp(mUseOkHttpEnable);
 
         mVideoView = findViewById(R.id.video_textureview);
         mProgressView = findViewById(R.id.video_progress_view);

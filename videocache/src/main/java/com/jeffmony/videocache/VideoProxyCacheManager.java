@@ -18,6 +18,9 @@ import com.jeffmony.videocache.listener.IVideoInfoParsedListener;
 import com.jeffmony.videocache.listener.VideoInfoParsedListener;
 import com.jeffmony.videocache.m3u8.M3U8;
 import com.jeffmony.videocache.model.VideoCacheInfo;
+import com.jeffmony.videocache.okhttp.IHttpPipelineListener;
+import com.jeffmony.videocache.okhttp.NetworkConfig;
+import com.jeffmony.videocache.okhttp.OkHttpManager;
 import com.jeffmony.videocache.proxy.LocalProxyVideoServer;
 import com.jeffmony.videocache.task.M3U8CacheTask;
 import com.jeffmony.videocache.task.Mp4CacheTask;
@@ -122,6 +125,7 @@ public class VideoProxyCacheManager {
         private int mReadTimeOut = 30 * 1000;
         private int mConnTimeOut = 30 * 1000;
         private int mPort;
+        private boolean mUseOkHttp;
 
         public Builder setExpireTime(long expireTime) {
             mExpireTime = expireTime;
@@ -148,19 +152,120 @@ public class VideoProxyCacheManager {
             return this;
         }
 
+        //需要自定义端口号的可以调用这个函数
         public Builder setPort(int port) {
             mPort = port;
             return this;
         }
 
+        public Builder setUseOkHttp(boolean useOkHttp) {
+            mUseOkHttp = useOkHttp;
+            return this;
+        }
+
         public VideoCacheConfig build() {
-            return new VideoCacheConfig(mExpireTime, mMaxCacheSize, mFilePath, mReadTimeOut, mConnTimeOut, mPort);
+            return new VideoCacheConfig(mExpireTime, mMaxCacheSize, mFilePath, mReadTimeOut, mConnTimeOut, mPort, mUseOkHttp);
         }
     }
+
+    private IHttpPipelineListener mHttpPipelineListener = new IHttpPipelineListener() {
+        @Override
+        public void onRequestStart(String url, String rangeHeader) {
+
+        }
+
+        @Override
+        public void onDnsStart(String url, long timeDuration) {
+
+        }
+
+        @Override
+        public void onDnsEnd(String url, long timeDuration) {
+
+        }
+
+        @Override
+        public void onConnectStart(String url, long timeDuration) {
+
+        }
+
+        @Override
+        public void onConnectEnd(String url, long timeDuration) {
+
+        }
+
+        @Override
+        public void onConnectFailed(String url, long timeDuration, Exception e) {
+
+        }
+
+        @Override
+        public void onConnectAcquired(String url, long timeDuration) {
+
+        }
+
+        @Override
+        public void onConnectRelease(String url, long timeDuration) {
+
+        }
+
+        @Override
+        public void onRequestHeaderStart(String url, long timeDuration) {
+
+        }
+
+        @Override
+        public void onRequestHeaderEnd(String url, long timeDuration) {
+
+        }
+
+        @Override
+        public void onRequestBodyStart(String url, long timeDuration) {
+
+        }
+
+        @Override
+        public void onRequestBodyEnd(String url, long timeDuration) {
+
+        }
+
+        @Override
+        public void onResponseHeaderStart(String url, long timeDuration) {
+
+        }
+
+        @Override
+        public void onResponseHeaderEnd(String url, long timeDuration) {
+
+        }
+
+        @Override
+        public void onResponseBodyStart(String url, long timeDuration) {
+
+        }
+
+        @Override
+        public void onResponseBodyEnd(String url, long timeDuration) {
+
+        }
+
+        @Override
+        public void onResponseEnd(String url, long timeDuration) {
+
+        }
+
+        @Override
+        public void onFailed(String url, long timeDuration, Exception e) {
+
+        }
+    };
 
     public void initProxyConfig(@NonNull VideoCacheConfig config) {
         ProxyCacheUtils.setVideoCacheConfig(config);
         new LocalProxyVideoServer();  //初始化本地代理服务
+
+        NetworkConfig networkConfig = new NetworkConfig(config.getReadTimeOut(), config.getConnTimeOut(), true);
+        OkHttpManager.getInstance().initConfig(networkConfig, mHttpPipelineListener);
 
         //设置缓存清理规则
         StorageManager.getInstance().initCacheConfig(config.getFilePath(), config.getMaxCacheSize(), config.getExpireTime());

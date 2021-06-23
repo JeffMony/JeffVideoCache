@@ -2,7 +2,6 @@ package com.jeffmony.videocache.okhttp;
 
 import com.jeffmony.videocache.utils.LogUtils;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -80,7 +79,7 @@ public class OkHttpUtils {
         builder.hostnameVerifier(hostnameVerifier);
     }
 
-    public static Request.Builder createRequestBuilder(String url, HashMap<String, String> headers, boolean isHeadRequest) {
+    public static Request.Builder createRequestBuilder(String url, Map<String, String> headers, boolean isHeadRequest) {
         Request.Builder requestBuilder;
         if (isHeadRequest) {
             requestBuilder = new Request.Builder().url(url).head();

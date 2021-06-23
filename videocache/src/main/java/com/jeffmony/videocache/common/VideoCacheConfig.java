@@ -8,15 +8,17 @@ public class VideoCacheConfig {
     private int mReadTimeOut;      //网络读超时
     private int mConnTimeOut;      //网络建连超时
     private int mPort;             //本地代理的端口
+    private boolean mUseOkHttp;    //使用okhttp接管网络请求
 
     public VideoCacheConfig(long expireTime, long maxCacheSize, String filePath,
-                            int readTimeOut, int connTimeOut, int port) {
+                            int readTimeOut, int connTimeOut, int port, boolean useOkHttp) {
         mExpireTime = expireTime;
         mMaxCacheSize = maxCacheSize;
         mFilePath = filePath;
         mReadTimeOut = readTimeOut;
         mConnTimeOut = connTimeOut;
         mPort = port;
+        mUseOkHttp = useOkHttp;
     }
 
     public long getExpireTime() {
@@ -46,4 +48,10 @@ public class VideoCacheConfig {
     public int getPort() {
         return mPort;
     }
+
+    public void setUseOkHttp(boolean useOkHttp) {
+        mUseOkHttp = useOkHttp;
+    }
+
+    public boolean useOkHttp() { return mUseOkHttp; }
 }
