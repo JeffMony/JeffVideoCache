@@ -20,6 +20,22 @@ JeffVideoCache 核心放在客户端, local server端和client做好数据同步
 
 ##### 1.如何接入
 
+在build.gradle中引入
+```
+allprojects {
+    repositories {
+	    maven { url 'https://jitpack.io' }
+	}
+}
+```
+
+在demo中直接引用
+```
+dependencies {
+    implementation 'com.github.JeffMony:JeffVideoCache:1.0.0'
+}
+```
+
 ###### 1.1 初始化
 程序启动的时候设置JeffVideoCache ----> SDK初始化配置
 ```
@@ -41,6 +57,9 @@ VideoProxyCacheManager.getInstance().initProxyConfig(builder.build());
 > * 3.设置网络读超时的时间
 > * 4.设置缓存的过期时间
 > * 5.设置最大缓存的限制
+> * 6.设置自定义的本地代理端口
+> * 7.设置是否使用okhttp;网络请求框架
+> * 8.设置网络请求是否忽略证书
 
 ###### 1.2 构建本地代理url
 ```
