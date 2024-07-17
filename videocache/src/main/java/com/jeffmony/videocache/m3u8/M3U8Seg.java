@@ -15,6 +15,7 @@ import java.util.Map;
  * M3U8文件中TS文件的结构
  */
 public class M3U8Seg implements Comparable<M3U8Seg> {
+    private static final String TAG = "M3U8Seg";
     private String mParentUrl;             //分片的上级M3U8的url
     private String mUrl;                   //分片的网络url
     private String mName;                  //分片的文件名
@@ -128,10 +129,11 @@ public class M3U8Seg implements Comparable<M3U8Seg> {
             Uri uri = Uri.parse(mUrl);
             String fileName = uri.getLastPathSegment();
             if (!TextUtils.isEmpty(fileName)) {
-                fileName = fileName.toLowerCase();
-                suffixName = ProxyCacheUtils.getSuffixName(fileName);
+                suffixName = ProxyCacheUtils.getSuffixName(fileName.toLowerCase());
             }
         }
+        //fix:https://github.com/JeffMony/JeffVideoCache/issues/21
+        suffixName = !TextUtils.isEmpty(suffixName) ? suffixName : ".ts";
         return mSegIndex + suffixName;
     }
 
