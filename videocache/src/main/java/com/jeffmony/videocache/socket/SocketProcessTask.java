@@ -11,6 +11,7 @@ import com.jeffmony.videocache.socket.response.M3U8SegResponse;
 import com.jeffmony.videocache.socket.response.Mp4Response;
 import com.jeffmony.videocache.utils.HttpUtils;
 import com.jeffmony.videocache.utils.LogUtils;
+import com.jeffmony.videocache.utils.Pinger;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
 
 import java.io.IOException;
@@ -46,8 +47,14 @@ public class SocketProcessTask implements Runnable {
                 BaseResponse response;
                 String url = request.getUri();
                 url = url.substring(1);
-                url = ProxyCacheUtils.decodeUriWithBase64(url);
                 LogUtils.d(TAG, "request url=" + url);
+                if (Pinger.isPingRequest(url)) {
+                    Pinger.responseToPing(mSocket);
+                    break;
+                }
+                url = ProxyCacheUtils.decodeUriWithBase64(url);
+                LogUtils.d(TAG, "decode request url=" + url);
+                //m3u8里的ts视频请求:Range header=null
                 LogUtils.d(TAG, "Range header=" + request.getRangeString());
 
                 long currentTime = System.currentTimeMillis();
@@ -96,7 +103,7 @@ public class SocketProcessTask implements Runnable {
                 } else {
                     throw new VideoCacheException("Local Socket Error url");
                 }
-
+                break;
             }
 
         } catch (Exception e) {

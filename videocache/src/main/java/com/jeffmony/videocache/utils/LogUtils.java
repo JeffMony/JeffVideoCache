@@ -40,4 +40,10 @@ public class LogUtils {
             Log.e(PREFIX + tag, msg);
         }
     }
+
+    public static void e(String tag, String msg, Throwable tr) {
+        if (ERROR) {
+            Log.e(PREFIX + tag, msg, tr);
+        }
+    }
 }

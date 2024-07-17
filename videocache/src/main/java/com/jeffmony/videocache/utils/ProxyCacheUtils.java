@@ -177,6 +177,14 @@ public class ProxyCacheUtils {
         }
     }
 
+    /**
+     * 判断代理服务器是否存活
+     * @return true or false
+     */
+    public static boolean isServerAlive() {
+        return Pinger.ping(2, 70);   // 70+140=max~210ms
+    }
+
     public static String getProxyUrl(String videoUrl, Map<String, String> headers, Map<String, Object> cacheParams) {
         String videoInfo = getVideoTypeInfo(videoUrl, cacheParams);
         String headerStr = map2Str(headers);
