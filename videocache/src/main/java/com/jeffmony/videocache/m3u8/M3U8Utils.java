@@ -469,40 +469,34 @@ public class M3U8Utils {
 
             BufferedReader bufferedReader;
 
-            if (inputStreamReader != null && bfw != null) {
-                bufferedReader = new BufferedReader(inputStreamReader);
-                String line;
-                try {
-                    while((line = bufferedReader.readLine()) != null) {
-                        if (line.startsWith(ProxyCacheUtils.LOCAL_PROXY_URL)) {
+            bufferedReader = new BufferedReader(inputStreamReader);
+            String line;
+            try {
+                while((line = bufferedReader.readLine()) != null) {
+                    if (line.startsWith(ProxyCacheUtils.LOCAL_PROXY_URL)) {
+                        if (sOldPort == 0) {
+                            sOldPort = ProxyCacheUtils.getPortFromProxyUrl(line);
                             if (sOldPort == 0) {
-                                sOldPort = ProxyCacheUtils.getPortFromProxyUrl(line);
-                                if (sOldPort == 0) {
-                                    tempM3U8File.delete();
-                                    return false;
-                                } else if (sOldPort == proxyPort) {
-                                    tempM3U8File.delete();
-                                    return true;
-                                }
+                                tempM3U8File.delete();
+                                return false;
+                            } else if (sOldPort == proxyPort) {
+                                tempM3U8File.delete();
+                                return true;
                             }
-                            line = line.replace(":" + sOldPort, ":" + proxyPort);
-                            bfw.write(line + "\n");
-                        } else {
-                            bfw.write(line + "\n");
                         }
+                        line = line.replace(":" + sOldPort, ":" + proxyPort);
+                        bfw.write(line + "\n");
+                    } else {
+                        bfw.write(line + "\n");
                     }
-                } catch (Exception e) {
-                    LogUtils.w(TAG, "Read proxy m3u8 file failed, exception="+e);
-                    return false;
-                } finally {
-                    ProxyCacheUtils.close(bfw);
-                    ProxyCacheUtils.close(inputStreamReader);
-                    ProxyCacheUtils.close(bufferedReader);
                 }
-            } else {
+            } catch (Exception e) {
+                LogUtils.w(TAG, "Read proxy m3u8 file failed, exception="+e);
+                return false;
+            } finally {
                 ProxyCacheUtils.close(bfw);
                 ProxyCacheUtils.close(inputStreamReader);
-                return false;
+                ProxyCacheUtils.close(bufferedReader);
             }
 
             if (proxyM3U8File.exists() && tempM3U8File.exists()) {

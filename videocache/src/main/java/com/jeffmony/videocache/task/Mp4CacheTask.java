@@ -26,7 +26,7 @@ public class Mp4CacheTask extends VideoCacheTask {
     private VideoRange mRequestRange;                          //当前请求的video range
     private long mCachedSize;                                  //已经缓存的文件大小
 
-    private String mVideoUrl;
+    private final String mVideoUrl;
 
     public Mp4CacheTask(VideoCacheInfo cacheInfo, Map<String, String> headers) {
         super(cacheInfo, headers);
@@ -43,7 +43,7 @@ public class Mp4CacheTask extends VideoCacheTask {
     }
 
     private void initVideoSegInfo() {
-        if (mVideoSegMap.size() == 0) {
+        if (mVideoSegMap.isEmpty()) {
             //当前没有缓存,需要从头下载
             mRequestRange = new VideoRange(0, mTotalSize);
         } else {
@@ -82,7 +82,7 @@ public class Mp4CacheTask extends VideoCacheTask {
      * @return
      */
     public VideoRange getRequestRange(long position) {
-        if (mVideoRangeMap.size() == 0) {
+        if (mVideoRangeMap.isEmpty()) {
             return new VideoRange(0, mTotalSize);
         } else {
             long start = -1;
@@ -272,7 +272,7 @@ public class Mp4CacheTask extends VideoCacheTask {
     }
 
     private synchronized void updateVideoRangeInfo() {
-        if (mVideoRangeMap.size() > 0) {
+        if (!mVideoRangeMap.isEmpty()) {
             long finalStart = -1;
             long finalEnd = -1;
 

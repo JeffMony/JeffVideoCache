@@ -182,8 +182,7 @@ public class ProxyCacheUtils {
         String headerStr = map2Str(headers);
         String proxyExtraInfo = videoUrl + VIDEO_PROXY_SPLIT_STR + videoInfo + VIDEO_PROXY_SPLIT_STR + headerStr;
         //http://127.0.0.1:port/base64-parameter
-        String proxyUrl = String.format(Locale.US, "http://%s:%d/%s", LOCAL_PROXY_HOST, sLocalPort, encodeUriWithBase64(proxyExtraInfo));
-        return proxyUrl;
+        return String.format(Locale.US, "http://%s:%d/%s", LOCAL_PROXY_HOST, sLocalPort, encodeUriWithBase64(proxyExtraInfo));
     }
 
     private static String getVideoTypeInfo(String videoUrl, Map<String, Object> cacheParams) {

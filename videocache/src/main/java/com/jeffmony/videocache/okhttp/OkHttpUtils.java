@@ -32,7 +32,7 @@ public class OkHttpUtils {
     private enum Singleton {
         INSTANCE;
 
-        private OkHttpClient mClient;
+        private final OkHttpClient mClient;
 
         Singleton() {
             OkHttpClient.Builder builder = new OkHttpClient.Builder();
@@ -72,7 +72,7 @@ public class OkHttpUtils {
         } catch (Exception e) {
             LogUtils.w(TAG, "Create SSLSocketFactory failed");
         }
-        if (trustManager != null && sslSocketFactory != null) {
+        if (sslSocketFactory != null) {
             builder.sslSocketFactory(sslSocketFactory, trustManager);
         }
         HostnameVerifier hostnameVerifier = (hostname, session) -> true;

@@ -21,8 +21,7 @@ public class UrlUtils {
         String baseUriPath = getBaseUrl(videoUrl);
         String hostUrl = getHostUrl(videoUrl);
         if (line.startsWith("//")) {
-            String tempUrl = getSchema(videoUrl) + ":" + line;
-            return tempUrl;
+            return getSchema(videoUrl) + ":" + line;
         }
         if (line.startsWith("/")) {
             String pathStr = getPathStr(videoUrl);
@@ -30,8 +29,7 @@ public class UrlUtils {
             if (hostUrl.endsWith("/")) {
                 hostUrl = hostUrl.substring(0, hostUrl.length() - 1);
             }
-            String tempUrl = hostUrl + longestCommonPrefixStr + line.substring(longestCommonPrefixStr.length());
-            return tempUrl;
+            return hostUrl + longestCommonPrefixStr + line.substring(longestCommonPrefixStr.length());
         }
         if (line.startsWith("http")) {
             return line;
@@ -45,8 +43,7 @@ public class UrlUtils {
         }
         int index = url.indexOf("://");
         if (index != -1) {
-            String result = url.substring(0, index);
-            return result;
+            return url.substring(0, index);
         }
         return "";
     }

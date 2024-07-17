@@ -7,7 +7,7 @@ android {
     buildToolsVersion "29.0.3"
 
     defaultConfig {
-        minSdkVersion 19
+        minSdkVersion 17
         targetSdkVersion 30
         versionCode 1
         versionName "1.0"
@@ -30,5 +30,6 @@ android {
 dependencies {
 
     implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'com.squareup.okhttp3:okhttp:4.9.0'
+    //支持安卓4.x
+    implementation "com.squareup.okhttp3:okhttp:3.12.1"
 }

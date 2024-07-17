@@ -29,7 +29,7 @@ public class OkHttpControl {
     private Response mResponse;
     private OkHttpClient mOkHttpClient;
     private Request.Builder mRequestBuilder;
-    private IHttpPipelineListener mHttpPipelineListener;
+    private final IHttpPipelineListener mHttpPipelineListener;
 
     public OkHttpControl(String url, Map<String, String> headers, boolean isHeadRequest, @NonNull IHttpPipelineListener listener, @NonNull NetworkConfig config) {
         mUrl = url;

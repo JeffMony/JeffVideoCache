@@ -48,16 +48,16 @@ public class VideoProxyCacheManager {
     private static final String TAG = "VideoProxyCacheManager";
 
     private static volatile VideoProxyCacheManager sInstance = null;
-    private ProxyMessageHandler mProxyHandler;
+    private final ProxyMessageHandler mProxyHandler;
 
-    private Map<String, VideoCacheTask> mCacheTaskMap = new ConcurrentHashMap<>();
-    private Map<String, VideoCacheInfo> mCacheInfoMap = new ConcurrentHashMap<>();
-    private Map<String, IVideoCacheListener> mCacheListenerMap = new ConcurrentHashMap<>();
-    private Map<String, Long> mVideoSeekMd5PositionMap = new ConcurrentHashMap<>();      //发生seek的时候加入set, 如果可以播放了, remove掉
+    private final Map<String, VideoCacheTask> mCacheTaskMap = new ConcurrentHashMap<>();
+    private final Map<String, VideoCacheInfo> mCacheInfoMap = new ConcurrentHashMap<>();
+    private final Map<String, IVideoCacheListener> mCacheListenerMap = new ConcurrentHashMap<>();
+    private final Map<String, Long> mVideoSeekMd5PositionMap = new ConcurrentHashMap<>();      //发生seek的时候加入set, 如果可以播放了, remove掉
     private final Object mSeekPositionLock = new Object();
 
-    private Set<String> mM3U8LocalProxyMd5Set = new ConcurrentSkipListSet<>();
-    private Set<String> mM3U8LiveMd5Set = new ConcurrentSkipListSet<>();
+    private final Set<String> mM3U8LocalProxyMd5Set = new ConcurrentSkipListSet<>();
+    private final Set<String> mM3U8LiveMd5Set = new ConcurrentSkipListSet<>();
 
     private String mPlayingUrlMd5;   //设置当前正在播放的视频url的MD5值
 
@@ -120,7 +120,7 @@ public class VideoProxyCacheManager {
     public static class Builder {
 
         private long mExpireTime = 7 * 24 * 60 * 60 * 1000;
-        private long mMaxCacheSize = 2 * 1024 * 1024 * 1024;
+        private long mMaxCacheSize = 2L * 1024 * 1024 * 1024;
         private String mFilePath;
         private int mReadTimeOut = 30 * 1000;
         private int mConnTimeOut = 30 * 1000;

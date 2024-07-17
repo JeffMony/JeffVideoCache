@@ -1,5 +1,6 @@
 package com.jeffmony.videocache.socket;
 
+import android.os.Build;
 import android.text.TextUtils;
 
 import com.jeffmony.videocache.common.VideoCacheException;
@@ -12,6 +13,7 @@ import com.jeffmony.videocache.utils.HttpUtils;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -22,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SocketProcessTask implements Runnable {
 
     private static final String TAG  = "SocketProcessTask";
-    private static AtomicInteger sRequestCountAtomic = new AtomicInteger(0);
+    private static final AtomicInteger sRequestCountAtomic = new AtomicInteger(0);
     private final Socket mSocket;
 
     public SocketProcessTask(Socket socket) {
@@ -46,6 +48,7 @@ public class SocketProcessTask implements Runnable {
                 url = url.substring(1);
                 url = ProxyCacheUtils.decodeUriWithBase64(url);
                 LogUtils.d(TAG, "request url=" + url);
+                LogUtils.d(TAG, "Range header=" + request.getRangeString());
 
                 long currentTime = System.currentTimeMillis();
                 ProxyCacheUtils.setSocketTime(currentTime);
@@ -87,7 +90,7 @@ public class SocketProcessTask implements Runnable {
                     String fileName = videoInfoArr[2];
                     String videoHeaders = videoInfoArr[3];
                     Map<String, String> headers = ProxyCacheUtils.str2Map(videoHeaders);
-                    LogUtils.d(TAG, parentUrl + "\n" + videoUrl + "\n" + fileName + "\n" + videoHeaders);
+                    LogUtils.d(TAG,  "ts request: parentUrl:" + parentUrl + "\nvideoUrl:" + videoUrl + "\nfileName:" + fileName + "\nvideoHeaders:" + videoHeaders);
                     response = new M3U8SegResponse(request, parentUrl, videoUrl, headers, currentTime, fileName);
                     response.sendResponse(mSocket, outputStream);
                 } else {
@@ -102,7 +105,17 @@ public class SocketProcessTask implements Runnable {
         } finally {
             ProxyCacheUtils.close(outputStream);
             ProxyCacheUtils.close(inputStream);
-            ProxyCacheUtils.close(mSocket);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                ProxyCacheUtils.close(mSocket);
+            } else {
+                if (mSocket != null) {
+                    try {
+                        mSocket.close();
+                    } catch (IOException e) {
+                        LogUtils.e(TAG,"close " + mSocket + " failed, exception = " + e);
+                    }
+                }
+            }
             int count = sRequestCountAtomic.decrementAndGet();
             LogUtils.i(TAG, "finally Socket solve count = " + count);
         }

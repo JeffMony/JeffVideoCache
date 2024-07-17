@@ -44,8 +44,7 @@ public class StorageUtils {
         try {
             synchronized (sInfoFileLock) {
                 fis = new ObjectInputStream(new FileInputStream(file));
-                VideoCacheInfo info = (VideoCacheInfo) fis.readObject();
-                return info;
+                return (VideoCacheInfo) fis.readObject();
             }
         } catch (Exception e) {
             LogUtils.w(TAG,"readVideoCacheInfo failed, exception=" + e.getMessage());

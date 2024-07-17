@@ -33,7 +33,7 @@ public class VideoProxyThreadUtils {
             TimeUnit.SECONDS, sThreadPoolWorkQueue, new MediaWorkerThreadFactory(), new ThreadPoolExecutor.DiscardOldestPolicy());
 
     //sdk中唯一的主线程handler
-    private static Handler sMainHandler = new Handler(Looper.getMainLooper());
+    private static final Handler sMainHandler = new Handler(Looper.getMainLooper());
 
 
     public static Handler getMainHandler() {

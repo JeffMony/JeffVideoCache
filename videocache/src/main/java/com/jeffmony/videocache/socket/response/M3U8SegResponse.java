@@ -29,12 +29,12 @@ public class M3U8SegResponse extends BaseResponse {
 
     private static final String TAG = "M3U8SegResponse";
     private String mParentUrl;
-    private File mSegFile;
-    private String mSegUrl;
-    private String mM3U8Md5;    //对应M3U8 url的md5值
-    private int mSegIndex;      //M3U8 ts对应的索引位置
+    private final File mSegFile;
+    private final String mSegUrl;
+    private final String mM3U8Md5;    //对应M3U8 url的md5值
+    private final int mSegIndex;      //M3U8 ts对应的索引位置
     private long mSegLength;
-    private String mFileName;
+    private final String mFileName;
 
     public M3U8SegResponse(HttpRequest request, String parentUrl, String videoUrl, Map<String, String> headers, long time, String fileName) throws Exception {
         super(request, videoUrl, headers, time);
@@ -105,9 +105,6 @@ public class M3U8SegResponse extends BaseResponse {
 
         try {
             randomAccessFile = new RandomAccessFile(mSegFile, "r");
-            if (randomAccessFile == null) {
-                throw new VideoCacheException("M3U8 ts file not found, this=" + this);
-            }
             int bufferedSize = StorageUtils.DEFAULT_BUFFER_SIZE;
             byte[] buffer = new byte[bufferedSize];
             long offset = 0;

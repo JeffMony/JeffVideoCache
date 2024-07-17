@@ -28,7 +28,7 @@ public class StorageManager {
     private static volatile StorageManager sInstance = null;
 
     private HandlerThread mCacheCleanThread;
-    private VideoCacheCleanHandler mCacheCleanHandler;
+    private final VideoCacheCleanHandler mCacheCleanHandler;
 
     private String mRootFilePath;
     private long mMaxCacheSize;

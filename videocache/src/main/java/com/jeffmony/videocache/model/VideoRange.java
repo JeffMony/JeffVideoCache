@@ -3,8 +3,8 @@ package com.jeffmony.videocache.model;
 import java.util.Objects;
 
 public class VideoRange {
-    private long mStart;   //分片的起始位置
-    private long mEnd;     //分片的结束位置
+    private final long mStart;   //分片的起始位置
+    private final long mEnd;     //分片的结束位置
 
     public VideoRange(long start, long end) {
         mStart = start;

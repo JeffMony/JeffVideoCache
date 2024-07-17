@@ -24,8 +24,8 @@ import java.util.Map;
 public class Mp4Response extends BaseResponse {
     private static final String TAG = "Mp4Response";
 
-    private File mFile;
-    private String mMd5;
+    private final File mFile;
+    private final String mMd5;
 
     public Mp4Response(HttpRequest request, String videoUrl, Map<String, String> headers, long time) throws Exception {
         super(request, videoUrl, headers, time);
@@ -33,12 +33,11 @@ public class Mp4Response extends BaseResponse {
         mFile = new File(mCachePath, mMd5 + File.separator + mMd5 + StorageUtils.NON_M3U8_SUFFIX);
         mResponseState = ResponseState.OK;
         Object lock = VideoLockManager.getInstance().getLock(mMd5);
-        int waitTime = WAIT_TIME;
         mTotalSize = VideoProxyCacheManager.getInstance().getTotalSize(mMd5);
         //等不到MP4文件大小就不返回
         while (mTotalSize <= 0) {
             synchronized (lock) {
-                lock.wait(waitTime);
+                lock.wait(WAIT_TIME);
             }
             mTotalSize = VideoProxyCacheManager.getInstance().getTotalSize(mMd5);
         }
@@ -83,9 +82,6 @@ public class Mp4Response extends BaseResponse {
         RandomAccessFile randomAccessFile = null;
         try {
             randomAccessFile = new RandomAccessFile(mFile, "r");
-            if (randomAccessFile == null) {
-                throw new VideoCacheException("Current File is not found, instance="+this);
-            }
             int bufferedSize = StorageUtils.DEFAULT_BUFFER_SIZE;
             byte[] buffer = new byte[bufferedSize];
             long offset = mStartPosition == -1L ? 0 : mStartPosition;

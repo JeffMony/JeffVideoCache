@@ -182,9 +182,7 @@ public class M3U8Seg implements Comparable<M3U8Seg> {
         //4.init Seg url对应的请求headers
         String proxyExtraInfo = mParentUrl + ProxyCacheUtils.SEG_PROXY_SPLIT_STR + mInitSegmentUri + ProxyCacheUtils.SEG_PROXY_SPLIT_STR +
                 File.separator + md5 + File.separator + getInitSegmentName() + ProxyCacheUtils.SEG_PROXY_SPLIT_STR + ProxyCacheUtils.map2Str(headers);
-        String proxyUrl = String.format(Locale.US, "http://%s:%d/%s", ProxyCacheUtils.LOCAL_PROXY_HOST,
-                ProxyCacheUtils.getLocalPort(), ProxyCacheUtils.encodeUriWithBase64(proxyExtraInfo));
-        return proxyUrl;
+        return String.format(Locale.US, "http://%s:%d/%s", ProxyCacheUtils.LOCAL_PROXY_HOST, ProxyCacheUtils.getLocalPort(), ProxyCacheUtils.encodeUriWithBase64(proxyExtraInfo));
     }
 
     public String getSegProxyUrl(String md5, Map<String, String> headers) {
@@ -195,9 +193,7 @@ public class M3U8Seg implements Comparable<M3U8Seg> {
         //4.Seg url对应的请求headers
         String proxyExtraInfo = mParentUrl + ProxyCacheUtils.SEG_PROXY_SPLIT_STR + mUrl + ProxyCacheUtils.SEG_PROXY_SPLIT_STR +
                 File.separator + md5 + File.separator + getSegName() + ProxyCacheUtils.SEG_PROXY_SPLIT_STR + ProxyCacheUtils.map2Str(headers);
-        String proxyUrl = String.format(Locale.US, "http://%s:%d/%s", ProxyCacheUtils.LOCAL_PROXY_HOST,
-                ProxyCacheUtils.getLocalPort(), ProxyCacheUtils.encodeUriWithBase64(proxyExtraInfo));
-        return proxyUrl;
+        return String.format(Locale.US, "http://%s:%d/%s", ProxyCacheUtils.LOCAL_PROXY_HOST, ProxyCacheUtils.getLocalPort(), ProxyCacheUtils.encodeUriWithBase64(proxyExtraInfo));
     }
 
 }

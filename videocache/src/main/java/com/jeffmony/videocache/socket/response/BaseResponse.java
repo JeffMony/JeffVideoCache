@@ -68,7 +68,7 @@ public abstract class BaseResponse {
             if (TextUtils.isEmpty(mProtocolVersion)) {
                 pw.append("HTTP/1.1 ");
             } else {
-                pw.append(mProtocolVersion + " ");
+                pw.append(mProtocolVersion).append(" ");
             }
             pw.append(mResponseState.getDescription()).append(" \r\n");
             if (!TextUtils.isEmpty(mMimeType)) {
@@ -112,6 +112,6 @@ public abstract class BaseResponse {
     }
 
     protected int getDelayTime(int waitTime) {
-        return waitTime > MAX_WAIT_TIME ? MAX_WAIT_TIME : waitTime;
+        return Math.min(waitTime, MAX_WAIT_TIME);
     }
 }

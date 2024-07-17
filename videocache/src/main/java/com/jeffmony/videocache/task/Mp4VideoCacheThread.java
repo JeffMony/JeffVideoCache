@@ -20,18 +20,18 @@ public class Mp4VideoCacheThread implements Runnable {
 
     private static final String TAG = "Mp4VideoCacheThread";
 
-    private VideoRange mRequestRange;                          //当前请求的video range
+    private final VideoRange mRequestRange;                          //当前请求的video range
     private Map<String, String> mHeaders;
-    private IMp4CacheThreadListener mListener;
+    private final IMp4CacheThreadListener mListener;
     private long mLastCachedSize;                              //上一次缓存大小
     private long mLastInvokeTime;                              //上次回调的时间戳
     private float mPercent = 0.0f;                             //缓存百分比
     private float mSpeed = 0.0f;                               //缓存速度
     private boolean mIsRunning = true;
-    private File mSaveDir;
-    private long mTotalSize;
-    private String mVideoUrl;
-    private String mMd5;
+    private final File mSaveDir;
+    private final long mTotalSize;
+    private final String mVideoUrl;
+    private final String mMd5;
 
     public Mp4VideoCacheThread(String url, Map<String, String> headers, VideoRange requestRange, long totalSize, String filePath, IMp4CacheThreadListener listener) {
         mVideoUrl = url;

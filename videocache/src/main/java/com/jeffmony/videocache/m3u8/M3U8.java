@@ -11,12 +11,12 @@ import java.util.List;
  * M3U8文件结构
  */
 public class M3U8 {
-    private String mUrl;                 //M3U8的url
+    private final String mUrl;                 //M3U8的url
     private float mTargetDuration;       //指定的duration
     private int mSequence = 0;           //序列起始值
     private int mVersion = 3;            //版本号
     private boolean mIsLive;             //是否是直播
-    private List<M3U8Seg> mSegList;      //分片seg 列表
+    private final List<M3U8Seg> mSegList;      //分片seg 列表
 
     public M3U8(String url) {
         mUrl = url;
@@ -67,8 +67,8 @@ public class M3U8 {
         return mSegList;
     }
 
-    public long getDuration() {
-        long duration = 0L;
+    public float getDuration() {
+        float duration = 0L;
         for (M3U8Seg ts : mSegList) {
             duration += ts.getDuration();
         }

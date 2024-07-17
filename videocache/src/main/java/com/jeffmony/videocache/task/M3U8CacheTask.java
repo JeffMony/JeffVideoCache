@@ -35,9 +35,9 @@ public class M3U8CacheTask extends VideoCacheTask {
     private volatile int mContinuousSuccessSegCount;   //连续请求分片成功的个数
 
     private int mCachedSegCount;
-    private int mTotalSegCount;
+    private final int mTotalSegCount;
     private Map<Integer, Long> mSegLengthMap;
-    private List<M3U8Seg> mSegList;
+    private final List<M3U8Seg> mSegList;
 
     public M3U8CacheTask(VideoCacheInfo cacheInfo, Map<String, String> headers, M3U8 m3u8) {
         super(cacheInfo, headers);
