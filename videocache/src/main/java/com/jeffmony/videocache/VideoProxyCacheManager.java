@@ -6,7 +6,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.text.TextUtils;
 
-import androidx.annotation.NonNull;
+import android.support.annotation.NonNull;
 
 import com.jeffmony.videocache.common.ProxyMessage;
 import com.jeffmony.videocache.common.VideoCacheConfig;

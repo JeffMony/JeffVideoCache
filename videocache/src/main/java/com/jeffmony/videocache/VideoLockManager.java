@@ -1,6 +1,6 @@
 package com.jeffmony.videocache;
 
-import androidx.annotation.NonNull;
+import android.support.annotation.NonNull;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

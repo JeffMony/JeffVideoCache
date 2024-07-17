@@ -7,7 +7,7 @@ import android.os.Message;
 import android.os.Process;
 import android.text.TextUtils;
 
-import androidx.annotation.NonNull;
+import android.support.annotation.NonNull;
 
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.StorageUtils;

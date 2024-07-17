@@ -29,7 +29,8 @@ android {
 
 dependencies {
 
-    implementation 'androidx.appcompat:appcompat:1.1.0'
+    //implementation 'androidx.annotation:annotation:1.8.0'
+    implementation 'com.android.support:support-annotations:28.0.0'
     //支持安卓4.x
     implementation "com.squareup.okhttp3:okhttp:3.12.1"
 }
