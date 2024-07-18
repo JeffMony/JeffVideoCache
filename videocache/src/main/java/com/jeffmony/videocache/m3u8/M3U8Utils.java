@@ -381,8 +381,8 @@ public class M3U8Utils {
             }
             bfw.write(Constants.TAG_ENDLIST);
             bfw.flush();
-        } catch (Exception e){
-            LogUtils.w(TAG, "createLocalM3U8File failed exception = " + e.getMessage());
+        } catch (Exception e) {
+            LogUtils.e(TAG, "createLocalM3U8File failed exception = ", e);
             if (m3u8File.exists()) {
                 m3u8File.delete();
             }

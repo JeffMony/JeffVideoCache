@@ -210,6 +210,7 @@ public class VideoInfoParseManager {
                 mListener.onM3U8ParsedFinished(m3u8, cacheInfo);
             }
         } catch (Exception e) {
+            LogUtils.e(TAG, "parseNetworkM3U8Info error.", e);
             mListener.onM3U8ParsedFailed(new VideoCacheException("parseM3U8Info failed, " + e.getMessage()), cacheInfo);
         }
     }
