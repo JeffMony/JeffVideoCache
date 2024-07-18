@@ -11,9 +11,11 @@ public class VideoCacheConfig {
     private int mPort;             //本地代理的端口
     private boolean mUseOkHttp;    //使用okhttp接管网络请求
 
+    private final SourceCreator mSourceCreator; //可以自定义响应、下载逻辑
+
     public VideoCacheConfig(long expireTime, long maxCacheSize, String filePath,
                             int readTimeOut, int connTimeOut, boolean ignoreCert,
-                            int port, boolean useOkHttp) {
+                            int port, boolean useOkHttp, SourceCreator sourceCreator) {
         mExpireTime = expireTime;
         mMaxCacheSize = maxCacheSize;
         mFilePath = filePath;
@@ -22,6 +24,7 @@ public class VideoCacheConfig {
         mIgnoreCert = ignoreCert;
         mPort = port;
         mUseOkHttp = useOkHttp;
+        mSourceCreator = sourceCreator != null ? sourceCreator : new SourceCreator();
     }
 
     public long getExpireTime() {
@@ -59,4 +62,8 @@ public class VideoCacheConfig {
     public boolean useOkHttp() { return mUseOkHttp; }
 
     public boolean ignoreCert() { return mIgnoreCert; }
+
+    public SourceCreator getSourceCreator() {
+        return mSourceCreator;
+    }
 }

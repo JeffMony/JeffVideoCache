@@ -3,6 +3,7 @@ package com.jeffmony.videocache.socket;
 import android.os.Build;
 import android.text.TextUtils;
 
+import com.jeffmony.videocache.common.SourceCreator;
 import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.socket.request.HttpRequest;
 import com.jeffmony.videocache.socket.response.BaseResponse;
@@ -28,8 +29,11 @@ public class SocketProcessTask implements Runnable {
     private static final AtomicInteger sRequestCountAtomic = new AtomicInteger(0);
     private final Socket mSocket;
 
+    private final SourceCreator mSourceCreator;
+
     public SocketProcessTask(Socket socket) {
         mSocket = socket;
+        mSourceCreator = ProxyCacheUtils.getConfig().getSourceCreator();
     }
 
     @Override
@@ -72,17 +76,17 @@ public class SocketProcessTask implements Runnable {
                     LogUtils.d(TAG, videoUrl + "\n" + videoTypeInfo + "\n" + videoHeaders);
 
                     if (TextUtils.equals(ProxyCacheUtils.M3U8, videoTypeInfo)) {
-                        response = new M3U8Response(request, videoUrl, headers, currentTime);
+                        response = mSourceCreator.createM3U8Response(request, videoUrl, headers, currentTime);
                     } else if (TextUtils.equals(ProxyCacheUtils.NON_M3U8, videoTypeInfo)) {
-                        response = new Mp4Response(request, videoUrl, headers, currentTime);
+                        response = mSourceCreator.createMp4Response(request, videoUrl, headers, currentTime);
                     } else {
                         //无法从已知的信息判定视频信息，需要重新请求
                         HttpURLConnection connection = HttpUtils.getConnection(videoUrl, headers);
                         String contentType = connection.getContentType();
                         if (ProxyCacheUtils.isM3U8Mimetype(contentType)) {
-                            response = new M3U8Response(request, videoUrl, headers, currentTime);
+                            response = mSourceCreator.createM3U8Response(request, videoUrl, headers, currentTime);
                         } else {
-                            response = new Mp4Response(request, videoUrl, headers, currentTime);
+                            response = mSourceCreator.createMp4Response(request, videoUrl, headers, currentTime);
                         }
                     }
                     response.sendResponse(mSocket, outputStream);
@@ -98,7 +102,7 @@ public class SocketProcessTask implements Runnable {
                     String videoHeaders = videoInfoArr[3];
                     Map<String, String> headers = ProxyCacheUtils.str2Map(videoHeaders);
                     LogUtils.d(TAG,  "ts request: parentUrl:" + parentUrl + "\nvideoUrl:" + videoUrl + "\nfileName:" + fileName + "\nvideoHeaders:" + videoHeaders);
-                    response = new M3U8SegResponse(request, parentUrl, videoUrl, headers, currentTime, fileName);
+                    response = mSourceCreator.createM3U8SegResponse(request, parentUrl, videoUrl, headers, currentTime, fileName);
                     response.sendResponse(mSocket, outputStream);
                 } else {
                     throw new VideoCacheException("Local Socket Error url");

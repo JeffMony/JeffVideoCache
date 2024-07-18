@@ -9,6 +9,7 @@ import android.text.TextUtils;
 import android.support.annotation.NonNull;
 
 import com.jeffmony.videocache.common.ProxyMessage;
+import com.jeffmony.videocache.common.SourceCreator;
 import com.jeffmony.videocache.common.VideoCacheConfig;
 import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.common.VideoType;
@@ -22,8 +23,6 @@ import com.jeffmony.videocache.okhttp.IHttpPipelineListener;
 import com.jeffmony.videocache.okhttp.NetworkConfig;
 import com.jeffmony.videocache.okhttp.OkHttpManager;
 import com.jeffmony.videocache.proxy.LocalProxyVideoServer;
-import com.jeffmony.videocache.task.M3U8CacheTask;
-import com.jeffmony.videocache.task.Mp4CacheTask;
 import com.jeffmony.videocache.task.VideoCacheTask;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
@@ -127,6 +126,7 @@ public class VideoProxyCacheManager {
         private boolean mIgnoreCert;
         private int mPort;
         private boolean mUseOkHttp;
+        private SourceCreator mSourceCreator;
 
         public Builder setExpireTime(long expireTime) {
             mExpireTime = expireTime;
@@ -169,13 +169,18 @@ public class VideoProxyCacheManager {
             return this;
         }
 
+        public Builder setSourceCreator(SourceCreator mSourceCreator) {
+            this.mSourceCreator = mSourceCreator;
+            return this;
+        }
+
         public VideoCacheConfig build() {
-            return new VideoCacheConfig(mExpireTime, mMaxCacheSize, mFilePath, mReadTimeOut, mConnTimeOut, mIgnoreCert, mPort, mUseOkHttp);
+            return new VideoCacheConfig(mExpireTime, mMaxCacheSize, mFilePath, mReadTimeOut, mConnTimeOut, mIgnoreCert, mPort, mUseOkHttp, mSourceCreator);
         }
     }
 
     //网络性能数据回调
-    private IHttpPipelineListener mHttpPipelineListener = new IHttpPipelineListener() {
+    private final IHttpPipelineListener mHttpPipelineListener = new IHttpPipelineListener() {
         @Override
         public void onRequestStart(String url, String rangeHeader) {
 
@@ -410,7 +415,7 @@ public class VideoProxyCacheManager {
     private void startM3U8Task(M3U8 m3u8, VideoCacheInfo cacheInfo, Map<String, String> headers) {
         VideoCacheTask cacheTask = mCacheTaskMap.get(cacheInfo.getVideoUrl());
         if (cacheTask == null) {
-            cacheTask = new M3U8CacheTask(cacheInfo, headers, m3u8);
+            cacheTask = ProxyCacheUtils.getConfig().getSourceCreator().createM3U8CacheTask(cacheInfo, headers, m3u8);
             mCacheTaskMap.put(cacheInfo.getVideoUrl(), cacheTask);
         }
         startVideoCacheTask(cacheTask, cacheInfo);
@@ -424,7 +429,7 @@ public class VideoProxyCacheManager {
     private void startNonM3U8Task(VideoCacheInfo cacheInfo, Map<String, String> headers) {
         VideoCacheTask cacheTask = mCacheTaskMap.get(cacheInfo.getVideoUrl());
         if (cacheTask == null) {
-            cacheTask = new Mp4CacheTask(cacheInfo, headers);
+            cacheTask = ProxyCacheUtils.getConfig().getSourceCreator().createMp4CacheTask(cacheInfo, headers);
             mCacheTaskMap.put(cacheInfo.getVideoUrl(), cacheTask);
         }
         startVideoCacheTask(cacheTask, cacheInfo);
