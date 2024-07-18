@@ -86,24 +86,32 @@ public class M3U8SegResponse extends BaseResponse {
 
     @Override
     public void sendBody(Socket socket, OutputStream outputStream, long pending) throws Exception {
-        if (mFileName.startsWith(ProxyCacheUtils.INIT_SEGMENT_PREFIX)) {
-            while(!mSegFile.exists()) {
-                downloadSegFile(mSegUrl, mSegFile);
-                if ((mSegLength > 0 && mSegLength == mSegFile.length()) || (mSegLength == -1 && mSegFile.length() > 0)) {
-                    break;
-                }
-            }
-        } else {
-            boolean isM3U8SegCompleted = VideoProxyCacheManager.getInstance().isM3U8SegCompleted(mM3U8Md5, mSegIndex, mSegFile.getAbsolutePath());
-            while (!isM3U8SegCompleted) {
-                downloadSegFile(mSegUrl, mSegFile);
-                isM3U8SegCompleted = VideoProxyCacheManager.getInstance().isM3U8SegCompleted(mM3U8Md5, mSegIndex, mSegFile.getAbsolutePath());
-                if ((mSegLength > 0 && mSegLength == mSegFile.length()) || (mSegLength == -1 && mSegFile.length() > 0)) {
-                    break;
-                }
+        //因为下载过程的文件名称和已经完成的不一样，可以简化判断条件
+        while(!mSegFile.exists()) {
+            downloadSegFile(mSegUrl, mSegFile);
+            if ((mSegLength > 0 && mSegLength == mSegFile.length()) || (mSegLength == -1 && mSegFile.length() > 0)) {
+                break;
             }
             LogUtils.d(TAG,  "FileLength=" + mSegFile.length() + ", segLength=" + mSegLength + ", FilePath=" + mSegFile.getAbsolutePath());
         }
+//        if (mFileName.startsWith(ProxyCacheUtils.INIT_SEGMENT_PREFIX)) {
+//            while(!mSegFile.exists()) {
+//                downloadSegFile(mSegUrl, mSegFile);
+//                if ((mSegLength > 0 && mSegLength == mSegFile.length()) || (mSegLength == -1 && mSegFile.length() > 0)) {
+//                    break;
+//                }
+//            }
+//        } else {
+//            boolean isM3U8SegCompleted = VideoProxyCacheManager.getInstance().isM3U8SegCompleted(mM3U8Md5, mSegIndex, mSegFile.getAbsolutePath());
+//            while (!isM3U8SegCompleted) {
+//                downloadSegFile(mSegUrl, mSegFile);
+//                isM3U8SegCompleted = VideoProxyCacheManager.getInstance().isM3U8SegCompleted(mM3U8Md5, mSegIndex, mSegFile.getAbsolutePath());
+//                if ((mSegLength > 0 && mSegLength == mSegFile.length()) || (mSegLength == -1 && mSegFile.length() > 0)) {
+//                    break;
+//                }
+//            }
+//            LogUtils.d(TAG,  "FileLength=" + mSegFile.length() + ", segLength=" + mSegLength + ", FilePath=" + mSegFile.getAbsolutePath());
+//        }
         RandomAccessFile randomAccessFile = null;
 
         try {
@@ -112,7 +120,7 @@ public class M3U8SegResponse extends BaseResponse {
             byte[] buffer = new byte[bufferedSize];
             long offset = 0;
 
-            while(shouldSendResponse(socket, mM3U8Md5)) {
+            if(shouldSendResponse(socket, mM3U8Md5)) {
                 randomAccessFile.seek(offset);
                 int readLength;
                 while((readLength = randomAccessFile.read(buffer, 0, buffer.length)) != -1) {
@@ -121,7 +129,6 @@ public class M3U8SegResponse extends BaseResponse {
                     randomAccessFile.seek(offset);
                 }
                 LogUtils.d(TAG, "Send M3U8 ts file end, this="+this);
-                break;
             }
         } catch (Exception e) {
             throw e;

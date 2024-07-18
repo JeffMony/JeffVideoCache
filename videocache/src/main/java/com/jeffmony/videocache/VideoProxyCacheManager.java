@@ -749,7 +749,7 @@ public class VideoProxyCacheManager {
         if (!segFile.exists() || segFile.length() == 0) {
             return false;
         }
-        for(Map.Entry entry : mCacheInfoMap.entrySet()) {
+        for(Map.Entry<String, VideoCacheInfo> entry : mCacheInfoMap.entrySet()) {
             String url = String.valueOf(entry.getKey());
             if (TextUtils.isEmpty(url)) {
                 continue;
