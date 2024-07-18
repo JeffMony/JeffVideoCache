@@ -28,8 +28,8 @@ public class M3U8Response extends BaseResponse {
 
     private static final String TAG = "M3U8Response";
 
-    private String mMd5;
-    private File mFile;
+    private final String mMd5;
+    private final File mFile;
 
     public M3U8Response(HttpRequest request, String videoUrl, Map<String, String> headers, long time) {
         super(request, videoUrl, headers, time);
@@ -62,9 +62,6 @@ public class M3U8Response extends BaseResponse {
 
         try {
             randomAccessFile = new RandomAccessFile(mFile, "r");
-            if (randomAccessFile == null) {
-                throw new VideoCacheException("M3U8 proxy file not found, this=" + this);
-            }
 
             int bufferedSize = StorageUtils.DEFAULT_BUFFER_SIZE;
             byte[] buffer = new byte[bufferedSize];

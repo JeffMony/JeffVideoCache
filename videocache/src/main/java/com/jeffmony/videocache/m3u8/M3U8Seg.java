@@ -15,6 +15,7 @@ import java.util.Map;
  * M3U8文件中TS文件的结构
  */
 public class M3U8Seg implements Comparable<M3U8Seg> {
+    private static final String TAG = "M3U8Seg";
     private String mParentUrl;             //分片的上级M3U8的url
     private String mUrl;                   //分片的网络url
     private String mName;                  //分片的文件名
@@ -128,10 +129,11 @@ public class M3U8Seg implements Comparable<M3U8Seg> {
             Uri uri = Uri.parse(mUrl);
             String fileName = uri.getLastPathSegment();
             if (!TextUtils.isEmpty(fileName)) {
-                fileName = fileName.toLowerCase();
-                suffixName = ProxyCacheUtils.getSuffixName(fileName);
+                suffixName = ProxyCacheUtils.getSuffixName(fileName.toLowerCase());
             }
         }
+        //fix:https://github.com/JeffMony/JeffVideoCache/issues/21
+        suffixName = !TextUtils.isEmpty(suffixName) ? suffixName : ".ts";
         return mSegIndex + suffixName;
     }
 
@@ -182,9 +184,7 @@ public class M3U8Seg implements Comparable<M3U8Seg> {
         //4.init Seg url对应的请求headers
         String proxyExtraInfo = mParentUrl + ProxyCacheUtils.SEG_PROXY_SPLIT_STR + mInitSegmentUri + ProxyCacheUtils.SEG_PROXY_SPLIT_STR +
                 File.separator + md5 + File.separator + getInitSegmentName() + ProxyCacheUtils.SEG_PROXY_SPLIT_STR + ProxyCacheUtils.map2Str(headers);
-        String proxyUrl = String.format(Locale.US, "http://%s:%d/%s", ProxyCacheUtils.LOCAL_PROXY_HOST,
-                ProxyCacheUtils.getLocalPort(), ProxyCacheUtils.encodeUriWithBase64(proxyExtraInfo));
-        return proxyUrl;
+        return String.format(Locale.US, "http://%s:%d/%s", ProxyCacheUtils.LOCAL_PROXY_HOST, ProxyCacheUtils.getLocalPort(), ProxyCacheUtils.encodeUriWithBase64(proxyExtraInfo));
     }
 
     public String getSegProxyUrl(String md5, Map<String, String> headers) {
@@ -195,9 +195,7 @@ public class M3U8Seg implements Comparable<M3U8Seg> {
         //4.Seg url对应的请求headers
         String proxyExtraInfo = mParentUrl + ProxyCacheUtils.SEG_PROXY_SPLIT_STR + mUrl + ProxyCacheUtils.SEG_PROXY_SPLIT_STR +
                 File.separator + md5 + File.separator + getSegName() + ProxyCacheUtils.SEG_PROXY_SPLIT_STR + ProxyCacheUtils.map2Str(headers);
-        String proxyUrl = String.format(Locale.US, "http://%s:%d/%s", ProxyCacheUtils.LOCAL_PROXY_HOST,
-                ProxyCacheUtils.getLocalPort(), ProxyCacheUtils.encodeUriWithBase64(proxyExtraInfo));
-        return proxyUrl;
+        return String.format(Locale.US, "http://%s:%d/%s", ProxyCacheUtils.LOCAL_PROXY_HOST, ProxyCacheUtils.getLocalPort(), ProxyCacheUtils.encodeUriWithBase64(proxyExtraInfo));
     }
 
 }

@@ -1,6 +1,6 @@
 package com.jeffmony.videocache.okhttp;
 
-import androidx.annotation.NonNull;
+import android.support.annotation.NonNull;
 
 import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.utils.LogUtils;

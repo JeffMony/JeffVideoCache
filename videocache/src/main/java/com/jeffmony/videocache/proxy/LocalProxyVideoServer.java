@@ -24,13 +24,12 @@ public class LocalProxyVideoServer {
 
     private ServerSocket mLocalServer;
     private Thread mRequestThread;
-    private int mPort;
 
     public LocalProxyVideoServer() {
         try {
             InetAddress address = InetAddress.getByName(ProxyCacheUtils.LOCAL_PROXY_HOST);
             mLocalServer = new ServerSocket(0, 8, address);
-            mPort = mLocalServer.getLocalPort();
+            int mPort = mLocalServer.getLocalPort();
             ProxyCacheUtils.getConfig().setPort(mPort);
             ProxyCacheUtils.setLocalPort(mPort);
             CountDownLatch startSignal = new CountDownLatch(1);
@@ -47,7 +46,7 @@ public class LocalProxyVideoServer {
 
     private class WaitSocketRequestsTask implements Runnable {
 
-        private CountDownLatch mLatch;
+        private final CountDownLatch mLatch;
 
         public WaitSocketRequestsTask(CountDownLatch latch) {
             mLatch = latch;

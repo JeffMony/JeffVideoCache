@@ -1,6 +1,6 @@
 package com.jeffmony.videocache;
 
-import androidx.annotation.NonNull;
+import android.support.annotation.NonNull;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -8,7 +8,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class VideoLockManager {
 
     private static volatile VideoLockManager sInstance = null;
-    private Map<String, Object> mLockMap = new ConcurrentHashMap<>();
+    private final Map<String, Object> mLockMap = new ConcurrentHashMap<>();
+
+    private VideoLockManager() {
+
+    }
 
     public static VideoLockManager getInstance() {
         if (sInstance == null) {
@@ -21,16 +25,21 @@ public class VideoLockManager {
         return sInstance;
     }
 
-    public synchronized Object getLock(@NonNull String md5) {
+    public Object getLock(@NonNull String md5) {
         Object lock = mLockMap.get(md5);
         if (lock == null) {
-            lock = new Object();
-            mLockMap.put(md5, lock);
+            synchronized (this) {
+                lock = mLockMap.get(md5);
+                if (lock == null) {
+                    lock = new Object();
+                    mLockMap.put(md5, lock);
+                }
+            }
         }
         return lock;
     }
 
-    public synchronized void removeLock(@NonNull String md5) {
+    public void removeLock(@NonNull String md5) {
         mLockMap.remove(md5);
     }
 }

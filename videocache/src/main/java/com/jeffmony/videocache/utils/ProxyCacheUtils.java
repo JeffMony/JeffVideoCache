@@ -68,7 +68,7 @@ public class ProxyCacheUtils {
     }
 
     private static String bytesToHexString(byte[] bytes) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
             sb.append(String.format("%02x", b));
         }
@@ -95,17 +95,11 @@ public class ProxyCacheUtils {
     }
 
     private static boolean isVideoMimeType(String mimeType) {
-        if (mimeType.startsWith("video/")) {
-            return true;
-        }
-        return false;
+        return mimeType.startsWith("video/");
     }
 
     private static boolean isAudioMimeType(String mimeType) {
-        if (mimeType.startsWith("audio/")) {
-            return true;
-        }
-        return false;
+        return mimeType.startsWith("audio/");
     }
 
     public static String encodeUriWithBase64(String str) {
@@ -121,14 +115,14 @@ public class ProxyCacheUtils {
     }
 
     public static String map2Str(Map<String, String> headers) {
-        if (headers == null || headers.size() == 0) {
+        if (headers == null || headers.isEmpty()) {
             return UNKNOWN;
         }
         StringBuilder headerStr = new StringBuilder();
         for (Map.Entry item : headers.entrySet()) {
             String key = (String) item.getKey();
             String value = (String) item.getValue();
-            headerStr.append(key + HEADER_SPLIT_STR + value);
+            headerStr.append(key).append(HEADER_SPLIT_STR).append(value);
             headerStr.append("\n");
         }
         return headerStr.toString();
@@ -150,10 +144,7 @@ public class ProxyCacheUtils {
 
     public static boolean isM3U8(String videoUrl, Map<String, Object> cacheParams) {
         String videoInfo = getVideoTypeInfo(videoUrl, cacheParams);
-        if (TextUtils.equals(M3U8, videoInfo)) {
-            return true;
-        }
-        return false;
+        return TextUtils.equals(M3U8, videoInfo);
     }
 
     /**
@@ -186,13 +177,20 @@ public class ProxyCacheUtils {
         }
     }
 
+    /**
+     * 判断代理服务器是否存活
+     * @return true or false
+     */
+    public static boolean isServerAlive() {
+        return Pinger.ping(2, 70);   // 70+140=max~210ms
+    }
+
     public static String getProxyUrl(String videoUrl, Map<String, String> headers, Map<String, Object> cacheParams) {
         String videoInfo = getVideoTypeInfo(videoUrl, cacheParams);
         String headerStr = map2Str(headers);
         String proxyExtraInfo = videoUrl + VIDEO_PROXY_SPLIT_STR + videoInfo + VIDEO_PROXY_SPLIT_STR + headerStr;
         //http://127.0.0.1:port/base64-parameter
-        String proxyUrl = String.format(Locale.US, "http://%s:%d/%s", LOCAL_PROXY_HOST, sLocalPort, encodeUriWithBase64(proxyExtraInfo));
-        return proxyUrl;
+        return String.format(Locale.US, "http://%s:%d/%s", LOCAL_PROXY_HOST, sLocalPort, encodeUriWithBase64(proxyExtraInfo));
     }
 
     private static String getVideoTypeInfo(String videoUrl, Map<String, Object> cacheParams) {
@@ -216,7 +214,8 @@ public class ProxyCacheUtils {
         String videoInfo;
         Uri videoUri = Uri.parse(videoUrl);
         String fileName = videoUri.getLastPathSegment();
-        if (!TextUtils.isEmpty(fileName)) {
+        //fix: http://pl-ali.youku.com/playlist/m3u8?x=y.......
+        if (!TextUtils.isEmpty(getSuffixName(fileName))) {
             fileName = fileName.toLowerCase();
             if (fileName.endsWith(StorageUtils.M3U8_SUFFIX)) {
                 videoInfo = M3U8;
@@ -232,10 +231,7 @@ public class ProxyCacheUtils {
     }
 
     public static boolean isFloatEqual(float f1, float f2) {
-        if (Math.abs(f1 - f2) < 0.1f) {
-            return true;
-        }
-        return false;
+        return Math.abs(f1 - f2) < 0.1f;
     }
 
     public static String getSuffixName(String name) {
@@ -243,7 +239,7 @@ public class ProxyCacheUtils {
             return "";
         }
         int dotIndex = name.lastIndexOf('.');
-        return (dotIndex >= 0 && dotIndex < name.length()) ? name.substring(dotIndex) : "";
+        return dotIndex >= 0 ? name.substring(dotIndex) : "";
     }
 
 }

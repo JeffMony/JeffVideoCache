@@ -7,7 +7,7 @@ import android.os.Message;
 import android.os.Process;
 import android.text.TextUtils;
 
-import androidx.annotation.NonNull;
+import android.support.annotation.NonNull;
 
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.StorageUtils;
@@ -28,7 +28,7 @@ public class StorageManager {
     private static volatile StorageManager sInstance = null;
 
     private HandlerThread mCacheCleanThread;
-    private VideoCacheCleanHandler mCacheCleanHandler;
+    private final VideoCacheCleanHandler mCacheCleanHandler;
 
     private String mRootFilePath;
     private long mMaxCacheSize;

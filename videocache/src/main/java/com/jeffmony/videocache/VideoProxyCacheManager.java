@@ -6,9 +6,10 @@ import android.os.Looper;
 import android.os.Message;
 import android.text.TextUtils;
 
-import androidx.annotation.NonNull;
+import android.support.annotation.NonNull;
 
 import com.jeffmony.videocache.common.ProxyMessage;
+import com.jeffmony.videocache.common.SourceCreator;
 import com.jeffmony.videocache.common.VideoCacheConfig;
 import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.common.VideoType;
@@ -22,8 +23,6 @@ import com.jeffmony.videocache.okhttp.IHttpPipelineListener;
 import com.jeffmony.videocache.okhttp.NetworkConfig;
 import com.jeffmony.videocache.okhttp.OkHttpManager;
 import com.jeffmony.videocache.proxy.LocalProxyVideoServer;
-import com.jeffmony.videocache.task.M3U8CacheTask;
-import com.jeffmony.videocache.task.Mp4CacheTask;
 import com.jeffmony.videocache.task.VideoCacheTask;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
@@ -48,16 +47,16 @@ public class VideoProxyCacheManager {
     private static final String TAG = "VideoProxyCacheManager";
 
     private static volatile VideoProxyCacheManager sInstance = null;
-    private ProxyMessageHandler mProxyHandler;
+    private final ProxyMessageHandler mProxyHandler;
 
-    private Map<String, VideoCacheTask> mCacheTaskMap = new ConcurrentHashMap<>();
-    private Map<String, VideoCacheInfo> mCacheInfoMap = new ConcurrentHashMap<>();
-    private Map<String, IVideoCacheListener> mCacheListenerMap = new ConcurrentHashMap<>();
-    private Map<String, Long> mVideoSeekMd5PositionMap = new ConcurrentHashMap<>();      //发生seek的时候加入set, 如果可以播放了, remove掉
+    private final Map<String, VideoCacheTask> mCacheTaskMap = new ConcurrentHashMap<>();
+    private final Map<String, VideoCacheInfo> mCacheInfoMap = new ConcurrentHashMap<>();
+    private final Map<String, IVideoCacheListener> mCacheListenerMap = new ConcurrentHashMap<>();
+    private final Map<String, Long> mVideoSeekMd5PositionMap = new ConcurrentHashMap<>();      //发生seek的时候加入set, 如果可以播放了, remove掉
     private final Object mSeekPositionLock = new Object();
 
-    private Set<String> mM3U8LocalProxyMd5Set = new ConcurrentSkipListSet<>();
-    private Set<String> mM3U8LiveMd5Set = new ConcurrentSkipListSet<>();
+    private final Set<String> mM3U8LocalProxyMd5Set = new ConcurrentSkipListSet<>();
+    private final Set<String> mM3U8LiveMd5Set = new ConcurrentSkipListSet<>();
 
     private String mPlayingUrlMd5;   //设置当前正在播放的视频url的MD5值
 
@@ -120,13 +119,14 @@ public class VideoProxyCacheManager {
     public static class Builder {
 
         private long mExpireTime = 7 * 24 * 60 * 60 * 1000;
-        private long mMaxCacheSize = 2 * 1024 * 1024 * 1024;
+        private long mMaxCacheSize = 2L * 1024 * 1024 * 1024;
         private String mFilePath;
         private int mReadTimeOut = 30 * 1000;
         private int mConnTimeOut = 30 * 1000;
         private boolean mIgnoreCert;
         private int mPort;
         private boolean mUseOkHttp;
+        private SourceCreator mSourceCreator;
 
         public Builder setExpireTime(long expireTime) {
             mExpireTime = expireTime;
@@ -169,13 +169,18 @@ public class VideoProxyCacheManager {
             return this;
         }
 
+        public Builder setSourceCreator(SourceCreator mSourceCreator) {
+            this.mSourceCreator = mSourceCreator;
+            return this;
+        }
+
         public VideoCacheConfig build() {
-            return new VideoCacheConfig(mExpireTime, mMaxCacheSize, mFilePath, mReadTimeOut, mConnTimeOut, mIgnoreCert, mPort, mUseOkHttp);
+            return new VideoCacheConfig(mExpireTime, mMaxCacheSize, mFilePath, mReadTimeOut, mConnTimeOut, mIgnoreCert, mPort, mUseOkHttp, mSourceCreator);
         }
     }
 
     //网络性能数据回调
-    private IHttpPipelineListener mHttpPipelineListener = new IHttpPipelineListener() {
+    private final IHttpPipelineListener mHttpPipelineListener = new IHttpPipelineListener() {
         @Override
         public void onRequestStart(String url, String rangeHeader) {
 
@@ -410,7 +415,7 @@ public class VideoProxyCacheManager {
     private void startM3U8Task(M3U8 m3u8, VideoCacheInfo cacheInfo, Map<String, String> headers) {
         VideoCacheTask cacheTask = mCacheTaskMap.get(cacheInfo.getVideoUrl());
         if (cacheTask == null) {
-            cacheTask = new M3U8CacheTask(cacheInfo, headers, m3u8);
+            cacheTask = ProxyCacheUtils.getConfig().getSourceCreator().createM3U8CacheTask(cacheInfo, headers, m3u8);
             mCacheTaskMap.put(cacheInfo.getVideoUrl(), cacheTask);
         }
         startVideoCacheTask(cacheTask, cacheInfo);
@@ -424,7 +429,7 @@ public class VideoProxyCacheManager {
     private void startNonM3U8Task(VideoCacheInfo cacheInfo, Map<String, String> headers) {
         VideoCacheTask cacheTask = mCacheTaskMap.get(cacheInfo.getVideoUrl());
         if (cacheTask == null) {
-            cacheTask = new Mp4CacheTask(cacheInfo, headers);
+            cacheTask = ProxyCacheUtils.getConfig().getSourceCreator().createMp4CacheTask(cacheInfo, headers);
             mCacheTaskMap.put(cacheInfo.getVideoUrl(), cacheTask);
         }
         startVideoCacheTask(cacheTask, cacheInfo);

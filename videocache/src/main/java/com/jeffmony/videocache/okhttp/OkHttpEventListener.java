@@ -2,10 +2,7 @@ package com.jeffmony.videocache.okhttp;
 
 import android.text.TextUtils;
 
-import androidx.annotation.NonNull;
-
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import android.support.annotation.NonNull;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -37,7 +34,7 @@ public class OkHttpEventListener extends EventListener {
     }
 
     @Override
-    public void callStart(@NotNull Call call) {
+    public void callStart(@NonNull Call call) {
         super.callStart(call);
 
         //获取当前的header头部
@@ -49,113 +46,113 @@ public class OkHttpEventListener extends EventListener {
     }
 
     @Override
-    public void dnsStart(@NotNull Call call, @NotNull String domainName) {
+    public void dnsStart(@NonNull Call call, @NonNull String domainName) {
         super.dnsStart(call, domainName);
         mListener.onDnsStart(mUrl, getCurrentTimeDuration());
     }
 
     @Override
-    public void dnsEnd(@NotNull Call call, @NotNull String domainName, @NotNull List<InetAddress> inetAddressList) {
+    public void dnsEnd(@NonNull Call call, @NonNull String domainName, @NonNull List<InetAddress> inetAddressList) {
         super.dnsEnd(call, domainName, inetAddressList);
         mListener.onDnsEnd(mUrl, getCurrentTimeDuration());
     }
 
     @Override
-    public void connectStart(@NotNull Call call, @NotNull InetSocketAddress inetSocketAddress, @NotNull Proxy proxy) {
+    public void connectStart(@NonNull Call call, @NonNull InetSocketAddress inetSocketAddress, @NonNull Proxy proxy) {
         super.connectStart(call, inetSocketAddress, proxy);
         mListener.onConnectStart(mUrl, getCurrentTimeDuration());
     }
 
     @Override
-    public void secureConnectStart(@NotNull Call call) {
+    public void secureConnectStart(@NonNull Call call) {
         super.secureConnectStart(call);
     }
 
     @Override
-    public void secureConnectEnd(@NotNull Call call, @Nullable Handshake handshake) {
+    public void secureConnectEnd(@NonNull Call call, Handshake handshake) {
         super.secureConnectEnd(call, handshake);
     }
 
     @Override
-    public void connectEnd(@NotNull Call call, @NotNull InetSocketAddress inetSocketAddress, @NotNull Proxy proxy, @Nullable Protocol protocol) {
+    public void connectEnd(@NonNull Call call, @NonNull InetSocketAddress inetSocketAddress, @NonNull Proxy proxy, Protocol protocol) {
         super.connectEnd(call, inetSocketAddress, proxy, protocol);
         mListener.onConnectEnd(mUrl, getCurrentTimeDuration());
     }
 
     @Override
-    public void connectFailed(@NotNull Call call, @NotNull InetSocketAddress inetSocketAddress, @NotNull Proxy proxy, @Nullable Protocol protocol, @NotNull IOException ioe) {
+    public void connectFailed(@NonNull Call call, @NonNull InetSocketAddress inetSocketAddress, @NonNull Proxy proxy, Protocol protocol, @NonNull IOException ioe) {
         super.connectFailed(call, inetSocketAddress, proxy, protocol, ioe);
         mListener.onConnectFailed(mUrl, getCurrentTimeDuration(), ioe);
     }
 
     @Override
-    public void connectionAcquired(@NotNull Call call, @NotNull Connection connection) {
+    public void connectionAcquired(@NonNull Call call, @NonNull Connection connection) {
         super.connectionAcquired(call, connection);
         mListener.onConnectAcquired(mUrl, getCurrentTimeDuration());
     }
 
     @Override
-    public void connectionReleased(@NotNull Call call, @NotNull Connection connection) {
+    public void connectionReleased(@NonNull Call call, @NonNull Connection connection) {
         super.connectionReleased(call, connection);
         mListener.onConnectRelease(mUrl, getCurrentTimeDuration());
     }
 
     @Override
-    public void requestHeadersStart(@NotNull Call call) {
+    public void requestHeadersStart(@NonNull Call call) {
         super.requestHeadersStart(call);
         mListener.onRequestHeaderStart(mUrl, getCurrentTimeDuration());
     }
 
     @Override
-    public void requestHeadersEnd(@NotNull Call call, @NotNull Request request) {
+    public void requestHeadersEnd(@NonNull Call call, @NonNull Request request) {
         super.requestHeadersEnd(call, request);
         mListener.onRequestHeaderEnd(mUrl, getCurrentTimeDuration());
     }
 
     @Override
-    public void requestBodyStart(@NotNull Call call) {
+    public void requestBodyStart(@NonNull Call call) {
         super.requestBodyStart(call);
         mListener.onRequestBodyStart(mUrl, getCurrentTimeDuration());
     }
 
     @Override
-    public void requestBodyEnd(@NotNull Call call, long byteCount) {
+    public void requestBodyEnd(@NonNull Call call, long byteCount) {
         super.requestBodyEnd(call, byteCount);
         mListener.onRequestBodyEnd(mUrl, getCurrentTimeDuration());
     }
 
     @Override
-    public void responseHeadersStart(@NotNull Call call) {
+    public void responseHeadersStart(@NonNull Call call) {
         super.responseHeadersStart(call);
         mListener.onResponseHeaderStart(mUrl, getCurrentTimeDuration());
     }
 
     @Override
-    public void responseHeadersEnd(@NotNull Call call, @NotNull Response response) {
+    public void responseHeadersEnd(@NonNull Call call, @NonNull Response response) {
         super.responseHeadersEnd(call, response);
         mListener.onResponseHeaderEnd(mUrl, getCurrentTimeDuration());
     }
 
     @Override
-    public void responseBodyStart(@NotNull Call call) {
+    public void responseBodyStart(@NonNull Call call) {
         super.responseBodyStart(call);
         mListener.onResponseBodyStart(mUrl, getCurrentTimeDuration());
     }
 
     @Override
-    public void responseBodyEnd(@NotNull Call call, long byteCount) {
+    public void responseBodyEnd(@NonNull Call call, long byteCount) {
         super.responseBodyEnd(call, byteCount);
         mListener.onResponseBodyEnd(mUrl, getCurrentTimeDuration());
     }
 
     @Override
-    public void callEnd(@NotNull Call call) {
+    public void callEnd(@NonNull Call call) {
         super.callEnd(call);
         mListener.onResponseEnd(mUrl, getCurrentTimeDuration());
     }
 
     @Override
-    public void callFailed(@NotNull Call call, @NotNull IOException ioe) {
+    public void callFailed(@NonNull Call call, @NonNull IOException ioe) {
         super.callFailed(call, ioe);
         mListener.onFailed(mUrl, getCurrentTimeDuration(), ioe);
     }

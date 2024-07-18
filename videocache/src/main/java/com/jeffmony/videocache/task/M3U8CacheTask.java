@@ -29,15 +29,17 @@ public class M3U8CacheTask extends VideoCacheTask {
 
     private static final String TAG = "M3U8CacheTask";
 
+    private static final String TEMP_POSTFIX = ".download";
+
     private static final int THREAD_POOL_COUNT = 6;
     private static final int CONTINUOUS_SUCCESS_TS_THRESHOLD = 6;
     private volatile int mM3U8DownloadPoolCount;
     private volatile int mContinuousSuccessSegCount;   //连续请求分片成功的个数
 
     private int mCachedSegCount;
-    private int mTotalSegCount;
+    private final int mTotalSegCount;
     private Map<Integer, Long> mSegLengthMap;
-    private List<M3U8Seg> mSegList;
+    private final List<M3U8Seg> mSegList;
 
     public M3U8CacheTask(VideoCacheInfo cacheInfo, Map<String, String> headers, M3U8 m3u8) {
         super(cacheInfo, headers);
@@ -185,6 +187,7 @@ public class M3U8CacheTask extends VideoCacheTask {
             int responseCode = connection.getResponseCode();
             if (responseCode == HttpUtils.RESPONSE_200 || responseCode == HttpUtils.RESPONSE_206) {
                 seg.setRetryCount(0);
+                //no effect
                 if (mContinuousSuccessSegCount > CONTINUOUS_SUCCESS_TS_THRESHOLD && mM3U8DownloadPoolCount < THREAD_POOL_COUNT) {
                     mM3U8DownloadPoolCount += 1;
                     mContinuousSuccessSegCount -= 1;
@@ -196,6 +199,7 @@ public class M3U8CacheTask extends VideoCacheTask {
             } else {
                 mContinuousSuccessSegCount = 0;
                 if (responseCode == HttpUtils.RESPONSE_503) {
+                    //no effect
                     if (mM3U8DownloadPoolCount > 1) {
                         mM3U8DownloadPoolCount -= 1;
                         setThreadPoolArgument(mM3U8DownloadPoolCount, mM3U8DownloadPoolCount);
@@ -224,8 +228,12 @@ public class M3U8CacheTask extends VideoCacheTask {
     private void saveSegFile(InputStream inputStream, File file, long contentLength, M3U8Seg seg, String downloadUrl) throws Exception {
         FileOutputStream fos = null;
         long totalLength = 0;
+        File tmpFile = new File(file.getParentFile(), file.getName() + TEMP_POSTFIX);
+        if (tmpFile.exists()) {
+            tmpFile.delete();
+        }
         try {
-            fos = new FileOutputStream(file);
+            fos = new FileOutputStream(tmpFile);
             int len;
             byte[] buf = new byte[StorageUtils.DEFAULT_BUFFER_SIZE];
             while ((len = inputStream.read(buf)) != -1) {
@@ -237,32 +245,35 @@ public class M3U8CacheTask extends VideoCacheTask {
             } else {
                 seg.setContentLength(totalLength);
             }
+            tmpFile.renameTo(file);
         } catch (IOException e) {
-            if (file.exists() && ((contentLength > 0 && contentLength == file.length()) || (contentLength == -1 && totalLength == file.length()))) {
+            if (tmpFile.exists() && ((contentLength > 0 && contentLength == tmpFile.length()) || (contentLength == -1 && totalLength == tmpFile.length()))) {
                 //这时候说明file已经下载完成了
+                tmpFile.renameTo(file);
             } else {
                 if ((e instanceof ProtocolException &&
                         !TextUtils.isEmpty(e.getMessage()) &&
                         e.getMessage().contains("unexpected end of stream")) &&
-                        (contentLength > totalLength && totalLength == file.length())) {
-                    if (file.length() == 0) {
+                        (contentLength > totalLength && totalLength == tmpFile.length())) {
+                    if (tmpFile.length() == 0) {
                         seg.setRetryCount(seg.getRetryCount() + 1);
                         if (seg.getRetryCount() < HttpUtils.MAX_RETRY_COUNT) {
                             downloadSegFile(seg, file, downloadUrl);
                         } else {
-                            LogUtils.w(TAG, file.getAbsolutePath() + ", length=" + file.length() + ", saveFile failed, exception=" + e);
-                            if (file.exists()) {
-                                file.delete();
+                            LogUtils.w(TAG, tmpFile.getAbsolutePath() + ", length=" + tmpFile.length() + ", saveFile failed, exception=" + e);
+                            if (tmpFile.exists()) {
+                                tmpFile.delete();
                             }
                             throw e;
                         }
                     } else {
                         seg.setContentLength(totalLength);
+                        tmpFile.renameTo(file);
                     }
                 } else {
-                    LogUtils.w(TAG, file.getAbsolutePath() + " saveFile failed, exception=" + e);
-                    if (file.exists()) {
-                        file.delete();
+                    LogUtils.w(TAG, tmpFile.getAbsolutePath() + " saveFile failed, exception=" + e);
+                    if (tmpFile.exists()) {
+                        tmpFile.delete();
                     }
                     throw e;
                 }

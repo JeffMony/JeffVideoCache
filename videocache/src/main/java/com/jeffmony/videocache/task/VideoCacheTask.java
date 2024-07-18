@@ -1,6 +1,6 @@
 package com.jeffmony.videocache.task;
 
-import androidx.annotation.NonNull;
+import android.support.annotation.NonNull;
 
 import com.jeffmony.videocache.StorageManager;
 import com.jeffmony.videocache.listener.IVideoCacheTaskListener;
