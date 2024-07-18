@@ -28,6 +28,9 @@ import java.util.Map;
 public class M3U8SegResponse extends BaseResponse {
 
     private static final String TAG = "M3U8SegResponse";
+
+    private static final String TEMP_POSTFIX = ".downloading";
+
     private String mParentUrl;
     private final File mSegFile;
     private final String mSegUrl;
@@ -50,7 +53,7 @@ public class M3U8SegResponse extends BaseResponse {
         mHeaders.put("Connection", "close");
         mSegIndex = getSegIndex(fileName);
         mResponseState = ResponseState.OK;
-        LogUtils.i(TAG, "index="+mSegIndex+", parentUrl="+mParentUrl+", segUrl="+mSegUrl);
+        LogUtils.i(TAG, "start M3U8SegResponse: index=" + mSegIndex +", parentUrl=" + mParentUrl + "\n, segUrl=" + mSegUrl);
         VideoProxyCacheManager.getInstance().seekToCacheTaskFromServer(mParentUrl, mSegIndex);
     }
 
@@ -86,7 +89,7 @@ public class M3U8SegResponse extends BaseResponse {
         if (mFileName.startsWith(ProxyCacheUtils.INIT_SEGMENT_PREFIX)) {
             while(!mSegFile.exists()) {
                 downloadSegFile(mSegUrl, mSegFile);
-                if (mSegLength > 0 && mSegLength == mSegFile.length()) {
+                if ((mSegLength > 0 && mSegLength == mSegFile.length()) || (mSegLength == -1 && mSegFile.length() > 0)) {
                     break;
                 }
             }
@@ -95,7 +98,7 @@ public class M3U8SegResponse extends BaseResponse {
             while (!isM3U8SegCompleted) {
                 downloadSegFile(mSegUrl, mSegFile);
                 isM3U8SegCompleted = VideoProxyCacheManager.getInstance().isM3U8SegCompleted(mM3U8Md5, mSegIndex, mSegFile.getAbsolutePath());
-                if (mSegLength > 0 && mSegLength == mSegFile.length()) {
+                if ((mSegLength > 0 && mSegLength == mSegFile.length()) || (mSegLength == -1 && mSegFile.length() > 0)) {
                     break;
                 }
             }
@@ -128,6 +131,7 @@ public class M3U8SegResponse extends BaseResponse {
     }
 
     private void downloadSegFile(String url, File file) throws Exception {
+        LogUtils.i(TAG, "downloadSegFile file:" + file);
         HttpURLConnection connection = null;
         InputStream inputStream = null;
         try {
@@ -150,18 +154,26 @@ public class M3U8SegResponse extends BaseResponse {
 
     private void saveSegFile(InputStream inputStream, File file) throws Exception {
         FileOutputStream fos = null;
+        long totalLength = 0;
+        File tmpFile = new File(file.getParentFile(), file.getName() + TEMP_POSTFIX);
+        if (tmpFile.exists()) {
+            tmpFile.delete();
+        }
         try {
-            fos = new FileOutputStream(file);
+            fos = new FileOutputStream(tmpFile);
             int readLength;
             byte[] buffer = new byte[StorageUtils.DEFAULT_BUFFER_SIZE];
             while ((readLength = inputStream.read(buffer)) != -1) {
+                totalLength += readLength;
                 fos.write(buffer, 0, readLength);
             }
+            tmpFile.renameTo(file);
         } catch (Exception e) {
-            if (file.exists() && mSegLength > 0 && mSegLength == file.length()) {
+            if (tmpFile.exists() && ((mSegLength > 0 && mSegLength == tmpFile.length()) || (mSegLength == -1 && tmpFile.length() == totalLength))) {
                 //说明此文件下载完成
+                tmpFile.renameTo(file);
             } else {
-                file.delete();
+                tmpFile.delete();
             }
             throw e;
         } finally {
