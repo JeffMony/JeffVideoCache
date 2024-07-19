@@ -17,7 +17,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -38,7 +37,6 @@ public class M3U8CacheTask extends VideoCacheTask {
 
     private int mCachedSegCount;
     private final int mTotalSegCount;
-    private Map<Integer, Long> mSegLengthMap;
     private final List<M3U8Seg> mSegList;
 
     public M3U8CacheTask(VideoCacheInfo cacheInfo, Map<String, String> headers, M3U8 m3u8) {
@@ -46,10 +44,6 @@ public class M3U8CacheTask extends VideoCacheTask {
         mSegList = m3u8.getSegList();
         mTotalSegCount = cacheInfo.getTotalTs();
         mCachedSegCount = cacheInfo.getCachedTs();
-        mSegLengthMap = cacheInfo.getTsLengthMap();
-        if (mSegLengthMap == null) {
-            mSegLengthMap = new HashMap<>();
-        }
         mHeaders.put("Connection", "close");
     }
 
@@ -61,6 +55,7 @@ public class M3U8CacheTask extends VideoCacheTask {
         notifyOnTaskStart();
         initM3U8TsInfo();
         int seekIndex = mCachedSegCount > 1 && mCachedSegCount <= mTotalSegCount ? mCachedSegCount - 1 : mCachedSegCount;
+        //todo 这里的逻辑有问题，假如第一次播放视频，seek进度条，没完成缓存就退出；那么下次再进入播放时，计算的下载起点是不靠谱的；必须要获取到当前播放请求index
         startRequestVideoRange(seekIndex);
     }
 
@@ -72,7 +67,6 @@ public class M3U8CacheTask extends VideoCacheTask {
             File tempTsFile = new File(mSaveDir, ts.getSegName());
             if (tempTsFile.exists() && tempTsFile.length() > 0) {
                 ts.setFileSize(tempTsFile.length());
-                mSegLengthMap.put(index, tempTsFile.length());
                 tempCachedSize += tempTsFile.length();
                 tempCachedTs++;
             } else {
@@ -171,7 +165,6 @@ public class M3U8CacheTask extends VideoCacheTask {
         //确保当前文件下载完整
         if (segFile.exists() && segFile.length() == seg.getContentLength()) {
             //只有这样的情况下才能保证当前的ts文件真正被下载下来了
-            mSegLengthMap.put(seg.getSegIndex(), segFile.length());
             seg.setName(segName);
             seg.setFileSize(segFile.length());
             //更新进度
@@ -291,7 +284,6 @@ public class M3U8CacheTask extends VideoCacheTask {
             mCachedSegCount = mTotalSegCount;
         }
         mCacheInfo.setCachedTs(mCachedSegCount);
-        mCacheInfo.setTsLengthMap(mSegLengthMap);
         mCacheInfo.setCachedSize(mCachedSize);
         float percent = mCachedSegCount * 1.0f * 100 / mTotalSegCount;
 
@@ -300,7 +292,7 @@ public class M3U8CacheTask extends VideoCacheTask {
             if (mCachedSize > mLastCachedSize && nowTime > mLastInvokeTime) {
                 mSpeed = (mCachedSize - mLastCachedSize) * 1000 * 1.0f / (nowTime - mLastInvokeTime);
             }
-            mListener.onM3U8TaskProgress(percent, mCachedSize, mSpeed, mSegLengthMap);
+            mListener.onM3U8TaskProgress(percent, mCachedSize, mSpeed);
             mPercent = percent;
             mCacheInfo.setPercent(percent);
             mCacheInfo.setSpeed(mSpeed);
@@ -334,7 +326,6 @@ public class M3U8CacheTask extends VideoCacheTask {
             File tempTsFile = new File(mSaveDir, ts.getSegName());
             if (tempTsFile.exists() && tempTsFile.length() > 0) {
                 ts.setFileSize(tempTsFile.length());
-                mSegLengthMap.put(index, tempTsFile.length());
                 tempCachedSize += tempTsFile.length();
                 tempCachedTs++;
             }
