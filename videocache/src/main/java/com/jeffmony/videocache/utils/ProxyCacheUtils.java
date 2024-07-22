@@ -186,6 +186,10 @@ public class ProxyCacheUtils {
     }
 
     public static String getProxyUrl(String videoUrl, Map<String, String> headers, Map<String, Object> cacheParams) {
+        if (!isServerAlive()) {
+            LogUtils.e(TAG, "local server is not alive, return primitive video url");
+            return videoUrl;
+        }
         String videoInfo = getVideoTypeInfo(videoUrl, cacheParams);
         String headerStr = map2Str(headers);
         String proxyExtraInfo = videoUrl + VIDEO_PROXY_SPLIT_STR + videoInfo + VIDEO_PROXY_SPLIT_STR + headerStr;
