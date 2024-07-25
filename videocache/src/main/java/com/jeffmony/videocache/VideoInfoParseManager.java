@@ -152,18 +152,14 @@ public class VideoInfoParseManager {
         if (!proxyM3U8File.exists()) {
             parseNetworkM3U8Info(videoRequest, cacheInfo);
         } else {
-            boolean result = M3U8Utils.updateM3U8TsPortInfo(proxyM3U8File, ProxyCacheUtils.getLocalPort());
-            if (result) {
-                File localM3U8File = new File(cacheInfo.getSavePath(), cacheInfo.getMd5() + StorageUtils.LOCAL_M3U8_SUFFIX);
-                try {
-                    M3U8 m3u8 = M3U8Utils.parseLocalM3U8Info(localM3U8File, cacheInfo.getVideoUrl());
-                    cacheInfo.setTotalTs(m3u8.getSegCount());
-                    videoRequest.getVideoInfoParsedListener().onM3U8ParsedFinished(videoRequest, m3u8, cacheInfo);
-                } catch (Exception e) {
-                    videoRequest.getVideoInfoParsedListener().onM3U8ParsedFailed(new VideoCacheException("parseLocalM3U8Info failed"), cacheInfo);
-                }
-            } else {
-                videoRequest.getVideoInfoParsedListener().onM3U8ParsedFailed(new VideoCacheException("updateM3U8TsPortInfo failed"), cacheInfo);
+            File localM3U8File = new File(cacheInfo.getSavePath(), cacheInfo.getMd5() + StorageUtils.LOCAL_M3U8_SUFFIX);
+            try {
+                M3U8 m3u8 = M3U8Utils.parseLocalM3U8Info(localM3U8File, cacheInfo.getVideoUrl());
+                cacheInfo.setTotalTs(m3u8.getSegCount());
+                videoRequest.getVideoInfoParsedListener().onM3U8ParsedFinished(videoRequest, m3u8, cacheInfo);
+            } catch (Exception e) {
+                LogUtils.e(TAG, "parseProxyM3U8Info error.", e);
+                videoRequest.getVideoInfoParsedListener().onM3U8ParsedFailed(new VideoCacheException("parseLocalM3U8Info failed", e), cacheInfo);
             }
         }
     }
@@ -186,28 +182,18 @@ public class VideoInfoParseManager {
                 cacheInfo.setTotalTs(m3u8.getSegCount());
                 // 1.将M3U8结构保存到本地
                 File localM3U8File = new File(cacheInfo.getSavePath(), cacheInfo.getMd5() + StorageUtils.LOCAL_M3U8_SUFFIX);
-                try {
-                    M3U8Utils.createLocalM3U8File(localM3U8File, m3u8);
-                } catch (Exception e) {
-                    LogUtils.w(TAG, "parseM3U8Info->createLocalM3U8File failed, exception=" + e);
-                }
+                M3U8Utils.createLocalM3U8File(localM3U8File, m3u8);
 
                 File proxyM3U8File = new File(cacheInfo.getSavePath(), cacheInfo.getMd5() + StorageUtils.PROXY_M3U8_SUFFIX);
-                if (proxyM3U8File.exists() && cacheInfo.getLocalPort() == ProxyCacheUtils.getLocalPort()) {
-                    //说明本地代理文件存在，连端口号都一样的，不用做任何改变
-
-                    //Do nothing.
-                } else {
-                    cacheInfo.setLocalPort(ProxyCacheUtils.getLocalPort());
-                    M3U8Utils.createProxyM3U8File(proxyM3U8File, m3u8, cacheInfo.getMd5(), videoRequest.getHeaders());
-                }
+                cacheInfo.setLocalPort(ProxyCacheUtils.getLocalPort());
+                M3U8Utils.createProxyM3U8File(proxyM3U8File, m3u8, cacheInfo.getMd5(), videoRequest.getHeaders());
 
                 // 2.构建一个本地代理的m3u8结构
                 videoRequest.getVideoInfoParsedListener().onM3U8ParsedFinished(videoRequest, m3u8, cacheInfo);
             }
         } catch (Exception e) {
             LogUtils.e(TAG, "parseNetworkM3U8Info error.", e);
-            videoRequest.getVideoInfoParsedListener().onM3U8ParsedFailed(new VideoCacheException("parseM3U8Info failed, " + e.getMessage()), cacheInfo);
+            videoRequest.getVideoInfoParsedListener().onM3U8ParsedFailed(new VideoCacheException("parseM3U8Info failed, " + e), cacheInfo);
         }
     }
 

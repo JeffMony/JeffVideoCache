@@ -401,6 +401,9 @@ public class M3U8Utils {
      * @throws Exception
      */
     public static void createProxyM3U8File(File m3u8File, M3U8 m3u8, String md5, Map<String, String> headers) throws Exception {
+        if (m3u8File.exists()) {
+            return;
+        }
         BufferedWriter bfw = new BufferedWriter(new FileWriter(m3u8File, false));
         bfw.write(Constants.PLAYLIST_HEADER + "\n");
         bfw.write(Constants.TAG_VERSION + ":" + m3u8.getVersion() + "\n");
@@ -443,6 +446,7 @@ public class M3U8Utils {
      * @return
      */
     public static boolean updateM3U8TsPortInfo(File proxyM3U8File, int proxyPort) {
+        //todo bug:没有更新EXT-X-MAP:URI的端口
         File tempM3U8File = null;
         if (proxyM3U8File.exists()) {
             File parentFile = proxyM3U8File.getParentFile();

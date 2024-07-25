@@ -165,7 +165,6 @@ public class M3U8CacheTask extends VideoCacheTask {
         //确保当前文件下载完整
         if (segFile.exists() && segFile.length() == seg.getContentLength()) {
             //只有这样的情况下才能保证当前的ts文件真正被下载下来了
-            seg.setName(segName);
             seg.setFileSize(segFile.length());
             //更新进度
             notifyCacheProgress();
@@ -290,7 +289,7 @@ public class M3U8CacheTask extends VideoCacheTask {
         if (!ProxyCacheUtils.isFloatEqual(percent, mPercent)) {
             long nowTime = System.currentTimeMillis();
             if (mCachedSize > mLastCachedSize && nowTime > mLastInvokeTime) {
-                mSpeed = (mCachedSize - mLastCachedSize) * 1000 * 1.0f / (nowTime - mLastInvokeTime);
+                mSpeed = (mCachedSize - mLastCachedSize) * 1000 * 1.0f / (nowTime - mLastInvokeTime); //byte/s
             }
             mListener.onM3U8TaskProgress(percent, mCachedSize, mSpeed);
             mPercent = percent;
