@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.util.Log;
 import java.io.File;
@@ -53,7 +54,7 @@ public final class DownloadRequest implements Comparable<DownloadRequest> {
   private DownloadRequestQueue downloadRequestQueue;
   private final long timestamp;
   private final Priority priority;
-  private boolean canceled = false;
+  private volatile boolean canceled = false;
   private Downloader downloader;
   private final DownloadCallback downloadCallback;
 
@@ -70,7 +71,7 @@ public final class DownloadRequest implements Comparable<DownloadRequest> {
     retryInterval = builder.retryInterval;
     allowedNetworkTypes = builder.allowedNetworkTypes;
     downloadState = DownloadState.PENDING;
-    timestamp = System.currentTimeMillis();
+    timestamp = SystemClock.uptimeMillis();
   }
 
   @Override public int compareTo(@NonNull DownloadRequest other) {

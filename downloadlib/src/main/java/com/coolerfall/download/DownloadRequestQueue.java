@@ -4,6 +4,8 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -115,6 +117,7 @@ final class DownloadRequestQueue {
       for (DownloadRequest request : currentRequests) {
         if (request.downloadId() == downloadId) {
           request.cancel();
+          currentRequests.remove(request);
           return true;
         }
       }
@@ -127,13 +130,13 @@ final class DownloadRequestQueue {
    * Cancel all the download.
    */
   void cancelAll() {
+    downloadQueue.clear();
     synchronized (currentRequests) {
       for (DownloadRequest request : currentRequests) {
         request.cancel();
       }
+      currentRequests.clear();
     }
-
-    currentRequests.clear();
   }
 
   /**
@@ -216,11 +219,7 @@ final class DownloadRequestQueue {
     /* release dispathcers */
     if (dispatchers != null) {
       stop();
-
-      for (int i = 0; i < dispatchers.length; i++) {
-        dispatchers[i] = null;
-      }
-
+      Arrays.fill(dispatchers, null);
       dispatchers = null;
     }
   }

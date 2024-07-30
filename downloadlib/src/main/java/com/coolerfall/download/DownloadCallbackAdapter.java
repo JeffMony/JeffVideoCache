@@ -35,7 +35,7 @@ public abstract class DownloadCallbackAdapter implements DownloadCallback {
   /**
    * {@inheritDoc}
    */
-  public void onSuccess(int downloadId, String filePath) {
+  public void onSuccess(int downloadId, String filePath, long totalBytes, long time) {
 
   }
 

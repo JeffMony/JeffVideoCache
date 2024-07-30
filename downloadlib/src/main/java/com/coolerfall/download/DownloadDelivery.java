@@ -15,7 +15,8 @@ final class DownloadDelivery {
   public DownloadDelivery(final Handler handler) {
     downloadPoster = new Executor() {
       @Override public void execute(@NonNull Runnable command) {
-        handler.post(command);
+          //handler.post(command);
+          command.run();
       }
     };
   }
@@ -67,10 +68,10 @@ final class DownloadDelivery {
    *
    * @param request download request
    */
-  void postSuccess(final DownloadRequest request) {
+  void postSuccess(final DownloadRequest request, final long totalBytes, final long time) {
     downloadPoster.execute(new Runnable() {
       @Override public void run() {
-        request.downloadCallback().onSuccess(request.downloadId(), request.destinationFilePath());
+        request.downloadCallback().onSuccess(request.downloadId(), request.destinationFilePath(), totalBytes, time);
       }
     });
   }

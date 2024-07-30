@@ -1,11 +1,14 @@
 package com.coolerfall.download;
 
 import android.os.Process;
+import android.os.SystemClock;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import static com.coolerfall.download.Utils.HTTP_OK;
 import static com.coolerfall.download.Utils.HTTP_PARTIAL;
@@ -18,7 +21,7 @@ import static com.coolerfall.download.Utils.HTTP_PARTIAL;
  */
 final class DownloadDispatcher extends Thread {
   private static final int SLEEP_BEFORE_DOWNLOAD = 500;
-  private static final int BUFFER_SIZE = 4096;
+  private static final int BUFFER_SIZE = 8192; //4096;
   private static final int END_OF_STREAM = -1;
   private static final String DEFAULT_THREAD_NAME = "DownloadDispatcher";
   private static final String IDLE_THREAD_NAME = "DownloadDispatcher-Idle";
@@ -52,15 +55,32 @@ final class DownloadDispatcher extends Thread {
 
     while (true) {
       try {
-        setName(IDLE_THREAD_NAME);
-        request = queue.take();
+        //setName(IDLE_THREAD_NAME);
+        //request = queue.take();
+        request = queue.poll(60, TimeUnit.SECONDS);
+        if (quit || isInterrupted()) {
+          logger.log("thread is interrupted, quit.isInterrupted:" + isInterrupted());
+          if (request != null) {
+            request.finish();
+          }
+          return;
+        }
+        if (request == null) {
+          continue;
+        }
+        if (request.isCanceled()) {
+          request.finish();
+          continue;
+        }
+
         logger.log("A new download request taken, download id: " + request.downloadId());
-        sleep(SLEEP_BEFORE_DOWNLOAD);
-        setName(DEFAULT_THREAD_NAME);
+        //sleep(SLEEP_BEFORE_DOWNLOAD);
+        //setName(DEFAULT_THREAD_NAME);
 
         /* start download */
         executeDownload(request);
       } catch (InterruptedException e) {
+        e.printStackTrace();
         /* we may have been interrupted because it was time to quit */
         if (quit) {
           if (request != null) {
@@ -98,7 +118,7 @@ final class DownloadDispatcher extends Thread {
 
   /* update download progress */
   private void updateProgress(DownloadRequest request, long bytesWritten, long totalBytes) {
-    long currentTimestamp = System.currentTimeMillis();
+    long currentTimestamp = SystemClock.uptimeMillis();
     if (bytesWritten != totalBytes
         && currentTimestamp - lastProgressTimestamp < request.progressInterval()) {
       return;
@@ -114,7 +134,8 @@ final class DownloadDispatcher extends Thread {
 
   /* update download success */
   @SuppressWarnings("ResultOfMethodCallIgnored") private void updateSuccess(
-      DownloadRequest request) {
+      DownloadRequest request, long totalBytes, long time) {
+    logger.log("onSuccess updateSuccess:" + request.destinationFilePath());
     updateState(request, DownloadState.SUCCESSFUL);
 
     /* notify the request download finish */
@@ -126,7 +147,7 @@ final class DownloadDispatcher extends Thread {
     }
 
     /* deliver success message */
-    delivery.postSuccess(request);
+    delivery.postSuccess(request, totalBytes, time);
   }
 
   /* update download failure */
@@ -169,7 +190,7 @@ final class DownloadDispatcher extends Thread {
 
   /* execute downloading */
   private void executeDownload(DownloadRequest request) {
-    if (Thread.currentThread().isInterrupted()) {
+    if (quit || isInterrupted()) {
       return;
     }
 
@@ -183,23 +204,35 @@ final class DownloadDispatcher extends Thread {
       }
 
       File file = new File(request.tempFilePath());
-      boolean fileExsits = file.exists();
-      raf = new RandomAccessFile(file, "rw");
+      boolean fileExist = file.exists();
       long breakpoint = file.length();
       long bytesWritten = 0;
-      if (fileExsits) {
-        /* set the range to continue the downloading */
-        raf.seek(breakpoint);
-        bytesWritten = breakpoint;
-        logger.log(
-            "Detect existed file with " + breakpoint + " bytes, start breakpoint downloading");
-      }
 
       int statusCode = downloader.start(request.uri(), breakpoint);
       is = downloader.byteStream();
       if (statusCode != HTTP_OK && statusCode != HTTP_PARTIAL) {
         logger.log("Incorrect http code got: " + statusCode);
+        if (fileExist) {
+          file.delete();
+        }
         throw new DownloadException(statusCode, "download fail");
+      }
+
+      if (fileExist) {
+        if (statusCode == HTTP_PARTIAL) {
+          /* set the range to continue the downloading */
+          raf = new RandomAccessFile(file, "rw");
+          raf.seek(breakpoint);
+          bytesWritten = breakpoint;
+          logger.log(
+                  "Detect existed file with " + breakpoint + " bytes, start breakpoint downloading");
+        } else {
+          boolean ret = file.delete();
+          raf = new RandomAccessFile(file, "rw");
+          logger.log("file exist, but server don't support breakpoint downloading, delete file:" + ret);
+        }
+      } else {
+        raf = new RandomAccessFile(file, "rw");
       }
 
       long contentLength = downloader.contentLength();
@@ -216,9 +249,11 @@ final class DownloadDispatcher extends Thread {
         byte[] buffer = new byte[BUFFER_SIZE];
         int length;
 
+        long start = SystemClock.uptimeMillis();
+        long hasReadBytes = 0;
         while (true) {
           /* if the request has canceld, stop the downloading */
-          if (Thread.currentThread().isInterrupted() || request.isCanceled()) {
+          if (quit || isInterrupted() || request.isCanceled()) {
             request.finish();
             return;
           }
@@ -236,12 +271,12 @@ final class DownloadDispatcher extends Thread {
           long totalBytes = noContentLength ? fileSize : contentLength;
 
           if (length == END_OF_STREAM) {
-            updateSuccess(request);
+            updateSuccess(request, hasReadBytes, SystemClock.uptimeMillis() - start);
             return;
           } else if (length == Integer.MIN_VALUE) {
             throw new DownloadException(statusCode, "transfer data error");
           }
-
+          hasReadBytes += length;
           bytesWritten += length;
           /* write buffer into local file */
           raf.write(buffer, 0, length);

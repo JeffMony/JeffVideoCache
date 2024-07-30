@@ -35,8 +35,10 @@ public interface DownloadCallback {
    *
    * @param downloadId download id in download request queue
    * @param filePath file path
+   * @param totalBytes total download bytes this time
+   * @param time download cost time
    */
-  void onSuccess(int downloadId, String filePath);
+  void onSuccess(int downloadId, String filePath, long totalBytes, long time);
 
   /**
    * Invoked when downloading failed.
