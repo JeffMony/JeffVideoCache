@@ -177,6 +177,8 @@ public class VideoInfoParseManager {
             if (m3u8.isIsLive()) {
                 //说明M3U8是直播
                 videoRequest.getVideoInfoParsedListener().onM3U8LiveCallback(cacheInfo);
+            } else if (m3u8.getSegList().isEmpty()) {
+                videoRequest.getVideoInfoParsedListener().onM3U8ParsedFailed(new VideoCacheException("parseM3U8Info failed, zero ts"), cacheInfo);
             } else {
                 cacheInfo.setVideoType(VideoType.M3U8_TYPE);
                 cacheInfo.setTotalTs(m3u8.getSegCount());
