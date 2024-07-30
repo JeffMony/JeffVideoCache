@@ -49,7 +49,8 @@ public class VideoProxyCacheManager {
     private static final String TAG = "VideoProxyCacheManager";
 
     private static volatile VideoProxyCacheManager sInstance = null;
-    private final ProxyMessageHandler mProxyHandler;
+    private final Handler mthreadHandler; //用于内部通信
+    private final Handler mMainHandler; //用于回调用户监听接口
 
     private final Map<String, VideoCacheTask> mCacheTaskMap = new ConcurrentHashMap<>();
     private final Map<String, VideoCacheInfo> mCacheInfoMap = new ConcurrentHashMap<>();
@@ -78,28 +79,30 @@ public class VideoProxyCacheManager {
     private VideoProxyCacheManager() {
         HandlerThread handlerThread = new HandlerThread("proxy_cache_thread");
         handlerThread.start();
-        mProxyHandler = new ProxyMessageHandler(handlerThread.getLooper());
+        mthreadHandler = new Handler(handlerThread.getLooper());
+        mMainHandler = new ProxyMessageHandler(Looper.getMainLooper());
         mListener = new IVideoInfoParsedListener() {
             @Override
             public void onM3U8ParsedFinished(VideoRequest videoRequest, M3U8 m3u8, VideoCacheInfo cacheInfo) {
-                String md5 = cacheInfo.getMd5();
-                notifyLocalProxyLock(VideoLockManager.getInstance().getLock(md5));
-                mM3U8LocalProxyMd5Set.add(md5);
                 //开始发起请求M3U8视频中的ts数据
                 startM3U8Task(m3u8, cacheInfo, videoRequest.getHeaders());
+                //下载任务准备好才通知可以回复
+                String md5 = cacheInfo.getMd5();
+                mM3U8LocalProxyMd5Set.add(md5);
+                notifyLocalProxyLock(VideoLockManager.getInstance().getLock(md5));
             }
 
             @Override
             public void onM3U8ParsedFailed(VideoCacheException e, VideoCacheInfo cacheInfo) {
                 notifyLocalProxyLock(VideoLockManager.getInstance().getLock(cacheInfo.getMd5()));
-                mProxyHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_ERROR, cacheInfo).sendToTarget();
+                mMainHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_ERROR, cacheInfo).sendToTarget();
             }
 
             @Override
             public void onM3U8LiveCallback(VideoCacheInfo cacheInfo) {
-                notifyLocalProxyLock(VideoLockManager.getInstance().getLock(cacheInfo.getMd5()));
                 mM3U8LiveMd5Set.add(cacheInfo.getMd5());
-                mProxyHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_FORBIDDEN, cacheInfo).sendToTarget();
+                notifyLocalProxyLock(VideoLockManager.getInstance().getLock(cacheInfo.getMd5()));
+                mMainHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_FORBIDDEN, cacheInfo).sendToTarget();
             }
 
             @Override
@@ -112,7 +115,7 @@ public class VideoProxyCacheManager {
             @Override
             public void onNonM3U8ParsedFailed(VideoCacheException e, VideoCacheInfo cacheInfo) {
                 notifyLocalProxyLock(VideoLockManager.getInstance().getLock(cacheInfo.getMd5()));
-                mProxyHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_ERROR, cacheInfo).sendToTarget();
+                mMainHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_ERROR, cacheInfo).sendToTarget();
             }
         };
     }
@@ -402,7 +405,7 @@ public class VideoProxyCacheManager {
                 } else if (videoCacheInfo.getVideoType() == VideoType.M3U8_LIVE_TYPE) {
                     //说明是直播
                     mM3U8LiveMd5Set.add(md5);
-                    mProxyHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_FORBIDDEN, videoCacheInfo).sendToTarget();
+                    mMainHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_FORBIDDEN, videoCacheInfo).sendToTarget();
                 } else {
                     startNonM3U8Task(videoCacheInfo, headers);
                 }
@@ -419,7 +422,7 @@ public class VideoProxyCacheManager {
     private void startM3U8Task(M3U8 m3u8, VideoCacheInfo cacheInfo, Map<String, String> headers) {
         VideoCacheTask cacheTask = mCacheTaskMap.get(cacheInfo.getVideoUrl());
         if (cacheTask == null) {
-            cacheTask = ProxyCacheUtils.getConfig().getSourceCreator().createM3U8CacheTask(cacheInfo, headers, m3u8);
+            cacheTask = ProxyCacheUtils.getConfig().getSourceCreator().createM3U8CacheTask(cacheInfo, headers, m3u8, mthreadHandler);
             mCacheTaskMap.put(cacheInfo.getVideoUrl(), cacheTask);
         }
         startVideoCacheTask(cacheTask, cacheInfo);
@@ -444,7 +447,7 @@ public class VideoProxyCacheManager {
         cacheTask.setTaskListener(new IVideoCacheTaskListener() {
             @Override
             public void onTaskStart() {
-                mProxyHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_START, cacheInfo).sendToTarget();
+                mMainHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_START, cacheInfo).sendToTarget();
             }
 
             @Override
@@ -456,23 +459,19 @@ public class VideoProxyCacheManager {
                 cacheInfo.setCachedSize(cachedSize);
                 cacheInfo.setSpeed(speed);
                 mCacheInfoMap.put(cacheInfo.getVideoUrl(), cacheInfo);
-                mProxyHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_PROGRESS, cacheInfo).sendToTarget();
+                mMainHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_PROGRESS, cacheInfo).sendToTarget();
             }
 
             @Override
             public void onM3U8TaskProgress(float percent, long cachedSize, float speed) {
                 notifyLocalProxyLock(lock);
-                cacheInfo.setPercent(percent);
-                cacheInfo.setCachedSize(cachedSize);
-                cacheInfo.setSpeed(speed);
-                mCacheInfoMap.put(cacheInfo.getVideoUrl(), cacheInfo);
-                mProxyHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_PROGRESS, cacheInfo).sendToTarget();
+                mMainHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_PROGRESS, cacheInfo).sendToTarget();
             }
 
             @Override
             public void onTaskFailed(Exception e) {
                 notifyLocalProxyLock(lock);
-                mProxyHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_ERROR, cacheInfo).sendToTarget();
+                mMainHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_ERROR, cacheInfo).sendToTarget();
             }
 
             @Override
@@ -488,7 +487,7 @@ public class VideoProxyCacheManager {
                 }
                 cacheInfo.setTotalSize(totalSize);
                 mCacheInfoMap.put(cacheInfo.getVideoUrl(), cacheInfo);
-                mProxyHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_COMPLETED, cacheInfo).sendToTarget();
+                mMainHandler.obtainMessage(ProxyMessage.MSG_VIDEO_PROXY_COMPLETED, cacheInfo).sendToTarget();
             }
         });
 
@@ -622,6 +621,7 @@ public class VideoProxyCacheManager {
      * @param url
      * @param segIndex
      */
+    @Deprecated
     public void seekToCacheTaskFromServer(String url, int segIndex) {
         String md5 = ProxyCacheUtils.computeMD5(url);
         boolean shouldSeek = false;
@@ -638,6 +638,20 @@ public class VideoProxyCacheManager {
                 cacheTask.seekToCacheTaskFromServer(segIndex);
             }
         });
+    }
+
+    /**
+     * 针对M3U8视频,从服务端传入分片索引到客户端来
+     * 确保知道目前最新的ts视频请求，以便调整下载优先级
+     * @param m3u8Url
+     * @param segIndex
+     * @param time
+     */
+    public void notifyCurSegIndex(String m3u8Url, int segIndex, long time) {
+        VideoCacheTask cacheTask = mCacheTaskMap.get(m3u8Url);
+        if (cacheTask != null) {
+            cacheTask.seekToCacheTaskFromServer(segIndex, time);
+        }
     }
 
     /**

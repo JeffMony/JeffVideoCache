@@ -181,6 +181,11 @@ public class Mp4CacheTask extends VideoCacheTask {
     public void seekToCacheTaskFromServer(int segIndex) { }
 
     @Override
+    public void seekToCacheTaskFromServer(int segIndex, long time) {
+
+    }
+
+    @Override
     public void seekToCacheTaskFromServer(long startPosition) {
         //来自服务端的seek操作
         boolean shouldSeekToCacheTask;

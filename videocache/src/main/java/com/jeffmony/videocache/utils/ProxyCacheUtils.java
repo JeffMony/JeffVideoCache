@@ -1,5 +1,6 @@
 package com.jeffmony.videocache.utils;
 
+import android.annotation.SuppressLint;
 import android.net.Uri;
 import android.text.TextUtils;
 import android.util.Base64;
@@ -33,9 +34,10 @@ public class ProxyCacheUtils {
     public static final String NON_M3U8 = "non_m3u8";
     public static final String INIT_SEGMENT_PREFIX = "init_seg_";
 
+    @SuppressLint("StaticFieldLeak, context is Application")
     private static VideoCacheConfig sConfig;
     private static int sLocalPort = 0;
-    private static long mSocketTime;     //socket运行的时间戳
+    private volatile static long mSocketTime;     //socket运行的时间戳
 
     public static void setVideoCacheConfig(VideoCacheConfig config) {
         sConfig = config;

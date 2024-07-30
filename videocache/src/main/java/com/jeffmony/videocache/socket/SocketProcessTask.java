@@ -1,15 +1,13 @@
 package com.jeffmony.videocache.socket;
 
 import android.os.Build;
+import android.os.SystemClock;
 import android.text.TextUtils;
 
 import com.jeffmony.videocache.common.SourceCreator;
 import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.socket.request.HttpRequest;
 import com.jeffmony.videocache.socket.response.BaseResponse;
-import com.jeffmony.videocache.socket.response.M3U8Response;
-import com.jeffmony.videocache.socket.response.M3U8SegResponse;
-import com.jeffmony.videocache.socket.response.Mp4Response;
 import com.jeffmony.videocache.utils.HttpUtils;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.Pinger;
@@ -30,6 +28,8 @@ public class SocketProcessTask implements Runnable {
     private final Socket mSocket;
 
     private final SourceCreator mSourceCreator;
+
+    private final long mSocketTaskCreateTime = SystemClock.uptimeMillis();
 
     public SocketProcessTask(Socket socket) {
         mSocket = socket;
@@ -60,8 +60,8 @@ public class SocketProcessTask implements Runnable {
                 LogUtils.d(TAG, "decode request url=" + url);
                 //m3u8里的ts视频请求:Range header=null
                 LogUtils.d(TAG, "Range header=" + request.getRangeString());
-
-                long currentTime = System.currentTimeMillis();
+                //最新的请求可以获得回应，旧的关闭；意味着播放器内部只能一个socket在请求数据
+                long currentTime = mSocketTaskCreateTime; //System.currentTimeMillis();
                 ProxyCacheUtils.setSocketTime(currentTime);
                 if (url.contains(ProxyCacheUtils.VIDEO_PROXY_SPLIT_STR)) {
                     String[] videoInfoArr = url.split(ProxyCacheUtils.VIDEO_PROXY_SPLIT_STR);

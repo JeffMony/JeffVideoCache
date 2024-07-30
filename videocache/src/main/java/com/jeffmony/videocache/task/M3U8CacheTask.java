@@ -121,6 +121,11 @@ public class M3U8CacheTask extends VideoCacheTask {
         startRequestVideoRange(segIndex);
     }
 
+    @Override
+    public void seekToCacheTaskFromServer(int segIndex, long time) {
+
+    }
+
     private void startRequestVideoRange(int curTs) {
         if (mCacheInfo.isCompleted()) {
             notifyOnTaskCompleted();

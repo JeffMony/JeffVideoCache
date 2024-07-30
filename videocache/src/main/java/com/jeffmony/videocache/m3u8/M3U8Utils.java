@@ -65,7 +65,7 @@ public class M3U8Utils {
             String segmentByteRange = null;
             float segDuration = 0;
             int segIndex = 0;
-
+            //todo 格式错误应该抛出
             String line;
             while ((line = bufferedReader.readLine()) != null) {
                 line = line.trim();

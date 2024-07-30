@@ -1,115 +1,115 @@
 package com.jeffmony.videocache.task;
 
-import android.text.TextUtils;
+import android.os.Handler;
+import android.os.SystemClock;
 
-import com.jeffmony.videocache.common.VideoCacheException;
+import com.coolerfall.download.DownloadCallback;
 import com.jeffmony.videocache.m3u8.M3U8;
 import com.jeffmony.videocache.m3u8.M3U8Seg;
 import com.jeffmony.videocache.model.VideoCacheInfo;
-import com.jeffmony.videocache.utils.HttpUtils;
 import com.jeffmony.videocache.utils.LogUtils;
 import com.jeffmony.videocache.utils.ProxyCacheUtils;
 import com.jeffmony.videocache.utils.StorageUtils;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.ProtocolException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 public class M3U8CacheTaskNew extends VideoCacheTask {
 
-    private static final String TAG = "M3U8CacheTask";
-
-    private static final String TEMP_POSTFIX = ".download";
-
-    private static final int THREAD_POOL_COUNT = 6;
-    private static final int CONTINUOUS_SUCCESS_TS_THRESHOLD = 6;
-    private volatile int mM3U8DownloadPoolCount;
-    private volatile int mContinuousSuccessSegCount;   //连续请求分片成功的个数
-
-    private int mCachedSegCount;
+    private static final String TAG = "M3U8CacheTaskNew";
     private final int mTotalSegCount;
-    private Map<Integer, Long> mSegLengthMap;
     private final List<M3U8Seg> mSegList;
+    private final FileDownloadManager mFileDownloadManager;
+    private final int M3U8_CACHE_STEP = 1; //初始任务数，后续会通过网络情况进行调整
 
-    public M3U8CacheTaskNew(VideoCacheInfo cacheInfo, Map<String, String> headers, M3U8 m3u8) {
-        super(cacheInfo, headers);
+    //存放正在下载的ts编号(key)和任务id(value)，避免产生不同downloadId但url相同的任务。ts编号: 负代表是EXT-X-MAP,特别地，Integer.MIN_VALUE代表-0
+    private final Map<Integer, Integer> mDownLoadIdMap = new HashMap<>();
+    private final List<Integer> mSegIndexUncachedList = new ArrayList<>(); //存放还没有缓存的ts编号
+    private int mRightCachingPos = 0; //mSeekIndex右边的任务，优先下载，指向mSegIndexUncachedList
+    private int mLeftCachingPos = 0; //mSeekIndex左边的任务，指向mSegIndexUncachedList
+    private final Handler mHandler;
+    private int mCachedSegCount;
+    private volatile int mSeekIndex = 0; //当前正在请求的ts索引
+    private float maxSpeed = 0;
+    private float minSpeed = 0;
+    private int expectedSeekIndex = 0;
+
+    private volatile boolean initFlag = false;
+
+
+    public M3U8CacheTaskNew(VideoCacheInfo cacheInfo, M3U8 m3u8, final Handler handler) {
+        super(cacheInfo, null);
+//        HandlerThread handlerThread = new HandlerThread("M3U8CacheTask");
+//        handlerThread.start();
+        mHandler = new Handler(handler.getLooper());
+        mFileDownloadManager = FileDownloadManager.getInstance();
         mSegList = m3u8.getSegList();
-        mTotalSegCount = cacheInfo.getTotalTs();
+        mTotalSegCount = m3u8.getSegCount();
         mCachedSegCount = cacheInfo.getCachedTs();
-        mSegLengthMap = cacheInfo.getTsLengthMap();
-        if (mSegLengthMap == null) {
-            mSegLengthMap = new HashMap<>();
-        }
-        mHeaders.put("Connection", "close");
+        StorageUtils.saveVideoCacheInfo(mCacheInfo, mSaveDir); //只更新一次
     }
 
     @Override
     public void startCacheTask() {
-        if (isTaskRunning()) {
+        if (initFlag) {
             return;
         }
-        notifyOnTaskStart();
-        initM3U8TsInfo();
-        int seekIndex = mCachedSegCount > 1 && mCachedSegCount <= mTotalSegCount ? mCachedSegCount - 1 : mCachedSegCount;
-        startRequestVideoRange(seekIndex);
-    }
-
-    private void initM3U8TsInfo() {
-        long tempCachedSize = 0;
-        int tempCachedTs = 0;
-        for (int index = 0; index < mSegList.size(); index++) {
-            M3U8Seg ts = mSegList.get(index);
-            File tempTsFile = new File(mSaveDir, ts.getSegName());
-            if (tempTsFile.exists() && tempTsFile.length() > 0) {
-                ts.setFileSize(tempTsFile.length());
-                mSegLengthMap.put(index, tempTsFile.length());
-                tempCachedSize += tempTsFile.length();
-                tempCachedTs++;
-            } else {
-                break;
-            }
-        }
-        mCachedSegCount = tempCachedTs;
-        mCachedSize = tempCachedSize;
-        if (mCachedSegCount == mTotalSegCount) {
-            mCacheInfo.setIsCompleted(true);
-        }
+        initFlag = true;
+        isStart = true;
+        //避免下载成功回调过快导致scheduleCacheTask和addCacheTask线程不安全
+        mHandler.post(() -> {
+            //第一个任务必须是能下载的，后续任务都靠onSuccess驱动
+            init();
+            scheduleCacheTask(M3U8_CACHE_STEP);
+            notifyOnTaskStart();
+        });
     }
 
     @Override
     public void pauseCacheTask() {
         LogUtils.i(TAG, "pauseCacheTask");
-        if (isTaskRunning()) {
-            mTaskExecutor.shutdownNow();
-        }
+        isStart = false;
+        mHandler.post(this::cancelAllTask);
     }
 
     @Override
     public void stopCacheTask() {
-        LogUtils.i(TAG, "stopCacheTask");
-        if (isTaskRunning()) {
-            mTaskExecutor.shutdownNow();
-        }
+        LogUtils.i(TAG, "start stopCacheTask");
+        isStart = false;
+        mHandler.post(() -> {
+            LogUtils.i(TAG, "execute stopCacheTask");
+            resetCacheTask();
+            mHandler.removeCallbacksAndMessages(null);
+        });
     }
 
     @Override
     public void resumeCacheTask() {
+        //mPlayer.start();
         LogUtils.i(TAG, "resumeCacheTask");
-        if (isTaskShutdown()) {
-            initM3U8TsInfo();
-            int seekIndex = mCachedSegCount > 1 && mCachedSegCount <= mTotalSegCount ? mCachedSegCount - 1 : mCachedSegCount;
-            startRequestVideoRange(seekIndex);
+        if (isStart) {
+            return;
         }
+        isStart = true;
+        mHandler.post(() -> {
+            int success = 0;
+            if (!mDownLoadIdMap.isEmpty()) {
+                //to avoid java.util.ConcurrentModificationException
+                List<Integer> tmpList = new ArrayList<>(mDownLoadIdMap.size());
+                tmpList.addAll(mDownLoadIdMap.keySet());
+                mDownLoadIdMap.clear();
+                for (Integer value: tmpList) {
+                    success += startDownloadSegTask(mSegList.get(value != Integer.MIN_VALUE ? Math.abs(value) : 0));
+                }
+            }
+            if (success == 0 && !mSegIndexUncachedList.isEmpty()) {
+                scheduleCacheTask(M3U8_CACHE_STEP);
+            }
+        });
     }
 
     @Override
@@ -121,225 +121,260 @@ public class M3U8CacheTaskNew extends VideoCacheTask {
     }
 
     @Override
-    public void seekToCacheTaskFromServer(int segIndex) {
-        LogUtils.i(TAG, "seekToCacheTaskFromServer segIndex="+segIndex);
-        pauseCacheTask();
-        startRequestVideoRange(segIndex);
+    public void seekToCacheTaskFromServer(int segIndex) {}
+
+    @Override
+    public void seekToCacheTaskFromServer(int segIndex, long time) {
+        //来自于外部线程调用
+        mHandler.post(() -> {
+            if (ProxyCacheUtils.getSocketTime() != time) {
+                //解决由于线程调度问题，可能旧的请求后于新的请求执行，这样子就乱套了，不过概率应该比较小
+                LogUtils.e(TAG, "seekToCacheTaskFromServer: out of date:" + segIndex);
+                return;
+            }
+            mSeekIndex = segIndex;
+            LogUtils.i(TAG, "seekToCacheTaskFromServer segIndex=" + mSeekIndex + " expectedSeekIndex:" + expectedSeekIndex);
+            //可能会有重复请求
+            if (mSeekIndex == expectedSeekIndex || mSeekIndex == expectedSeekIndex - 1) {
+                expectedSeekIndex = mSeekIndex + 1;
+                return;
+            }
+            //将缓存指针移动到seek的后面，保障用户体验
+            LogUtils.i(TAG, "seekToCacheTaskFromServer, user seek, scheduleCacheTask");
+            expectedSeekIndex = mSeekIndex + 1;
+            resetCacheTask();
+            scheduleCacheTask(M3U8_CACHE_STEP);
+        });
     }
 
-    private void startRequestVideoRange(int curTs) {
-        if (mCacheInfo.isCompleted()) {
+    private final DownloadCallback mCallback = new DownloadCallback() {
+        @Override
+        public void onStart(int downloadId, long totalBytes) {
+
+        }
+
+        @Override
+        public void onRetry(int downloadId) {
+
+        }
+
+        @Override
+        public void onProgress(int downloadId, long bytesWritten, long totalBytes) {
+
+        }
+
+        @Override
+        public void onSuccess(int downloadId, String filePath, long totalBytes, long time) {
+            //更新进度,子线程回调
+            //mHandler不能做耗时操作，否则会影响消息处理速度
+            mHandler.post(() -> {
+                long start = SystemClock.uptimeMillis();
+                float speed = ((float) totalBytes / 1024f) / ((float) time / 1000) ; //kb/s
+                Integer index = null;
+                Iterator<Map.Entry<Integer, Integer>> iterator = mDownLoadIdMap.entrySet().iterator();
+                Map.Entry<Integer, Integer> entry;
+                while (iterator.hasNext()) {
+                    entry = iterator.next();
+                    if (entry.getValue() == downloadId) {
+                        index = entry.getKey();
+                        iterator.remove();
+                        break;
+                    }
+                }
+                if (index != null && index >= 0) {
+                    mCachedSegCount++;
+                    mCachedSize += totalBytes;
+                    maxSpeed = Math.max(speed, maxSpeed);
+                    minSpeed = Math.min(speed, minSpeed);
+                }
+                int tsIndex = -1;
+                if (index != null) {
+                    tsIndex = index != Integer.MIN_VALUE ? Math.abs(index) : 0;
+                    int shadow = index != 0 && index != Integer.MIN_VALUE ? -index : (index == 0 ? Integer.MIN_VALUE : 0);
+                    if (mDownLoadIdMap.get(shadow) == null) {
+                        mSegIndexUncachedList.remove(Integer.valueOf(tsIndex));
+                    }
+                }
+                //todo 还应该可以缩减任务？
+                //根据大小做调整？获取第一个视频长度
+                //优先保障第一个视频
+                //cdn一般会比较慢，多个文件同时下载可能会限制，如何动态调整
+                //分片大小不一致
+                if (tsIndex >= 0) {
+                    M3U8Seg seg = mSegList.get(tsIndex);
+                    LogUtils.d(TAG, "onSuccess: speed:"+ speed + "KB/S,maxSpeed:" + maxSpeed + "KB/S" + ",minSpeed:" + minSpeed + "KB/S"
+                            + "\n,filePath:" + filePath
+                            + "\n,seg duration:" + seg.getDuration()
+                            + "\n,total Size:" + totalBytes / 1024f + "KB,time:" + time/1000f + "S,mDownLoadIdList size:" + mDownLoadIdMap.size());
+                    //如果下载速度满足播放器消费情况，则串行下载
+                    if ((float) time / 1000 <= seg.getDuration()) {
+                        scheduleCacheTask(1);
+                    } else {
+                        if (mDownLoadIdMap.isEmpty()) {
+                            scheduleCacheTask(3);
+                        } else if (mDownLoadIdMap.size() == 1) {
+                            scheduleCacheTask(2);
+                        } else if (mDownLoadIdMap.size() == 2) {
+                            scheduleCacheTask(1);
+                        }
+                    }
+                } else {
+                    //理论上不应该发生
+                    LogUtils.e(TAG, "tsIndex illegal");
+                    scheduleCacheTask(1);
+                }
+                LogUtils.d(TAG, "onSuccess scheduleCacheTask, mDownLoadIdList size:" + mDownLoadIdMap.size() + ",cost:" + (SystemClock.uptimeMillis() - start));
+                notifyCacheProgress();
+                LogUtils.d(TAG, "onSuccess total cost:" + (SystemClock.uptimeMillis() - start));
+            });
+        }
+
+        @Override
+        public void onFailure(int downloadId, int statusCode, String errMsg) {
+            notifyOnTaskFailed(new Exception("downloadId:" + downloadId + "statusCode:" + statusCode + errMsg));
+        }
+    };
+
+    private void init() {
+        //如果ts过多，遍历会耗时
+        int tempCachedTs = 0;
+        long tempCachedSize = 0;
+        for (int index = 0; index < mSegList.size(); index++) {
+            M3U8Seg ts = mSegList.get(index);
+            File tempTsFile = new File(mSaveDir, ts.getSegName());
+            boolean hasFinished = true;
+            if (tempTsFile.exists() && tempTsFile.length() > 0) {
+                tempCachedSize += tempTsFile.length();
+                tempCachedTs++;
+            } else {
+                hasFinished = false;
+            }
+            if (hasFinished && ts.hasInitSegment()) {
+                String initSegmentName = ts.getInitSegmentName();
+                File initSegmentFile = new File(mSaveDir, initSegmentName);
+                if (initSegmentFile.exists() && initSegmentFile.length() > 0) {
+                    //ignore
+                } else {
+                    hasFinished = false;
+                }
+            }
+            if (!hasFinished) {
+                mSegIndexUncachedList.add(index);
+            }
+        }
+        mCachedSegCount = tempCachedTs;
+        mCachedSize = tempCachedSize;
+        mTotalSize = mCachedSize;
+        mCacheInfo.setIsCompleted(mSegIndexUncachedList.isEmpty());
+    }
+
+    private void resetCacheTask() {
+        cancelAllTask();
+        mDownLoadIdMap.clear();
+        mRightCachingPos = 0;
+        mLeftCachingPos = 0;
+        mLastInvokeTime = 0;
+    }
+
+    private void cancelAllTask() {
+        for (int value : mDownLoadIdMap.values()) {
+            mFileDownloadManager.cancelTask(value);
+        }
+    }
+
+    private void scheduleCacheTask(int m3u8CacheStep) {
+        if (mSegIndexUncachedList.isEmpty()) {
             notifyOnTaskCompleted();
             return;
         }
-        if (isTaskRunning()) {
-            //已经存在的任务不需要重新创建了
-            return;
+        int success = 0;
+        //首先从mSeekIndex开始下载
+        for (int i = mRightCachingPos; i < mSegIndexUncachedList.size(); i++) {
+            int sgeIndex = mSegIndexUncachedList.get(i);
+            if (sgeIndex < mSeekIndex) {
+                continue;
+            }
+            mRightCachingPos = i;
+            final M3U8Seg seg = mSegList.get(sgeIndex);
+            success += startDownloadSegTask(seg);
+            if (success >= m3u8CacheStep) {
+                return;
+            }
         }
-        mTaskExecutor = new ThreadPoolExecutor(THREAD_POOL_COUNT, THREAD_POOL_COUNT, 0L,
-                TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), Executors.defaultThreadFactory(),
-                new ThreadPoolExecutor.DiscardOldestPolicy());
-        for (int index = curTs; index < mTotalSegCount; index++) {
-            final M3U8Seg seg = mSegList.get(index);
-            mTaskExecutor.execute(() -> {
-                try {
-                    startDownloadSegTask(seg);
-                } catch (Exception e) {
-                    LogUtils.w(TAG, "M3U8 ts video download failed, exception=" + e);
-                    notifyOnTaskFailed(e);
-                }
-            });
+        //如果mSeekIndex之后都是已经缓存的，则缓存之前的任务
+        for (int i = mLeftCachingPos; i < mSegIndexUncachedList.size(); i++) {
+            int sgeIndex = mSegIndexUncachedList.get(i);
+            if (sgeIndex >= mSeekIndex) {
+                return;
+            }
+            mLeftCachingPos = i;
+            final M3U8Seg seg = mSegList.get(sgeIndex);
+            success += startDownloadSegTask(seg);
+            if (success >= m3u8CacheStep) {
+                return;
+            }
         }
     }
 
-    private void startDownloadSegTask(M3U8Seg seg) throws Exception {
-        LogUtils.i(TAG, "startDownloadSegTask index="+seg.getSegIndex()+", url="+seg.getUrl());
+    private int startDownloadSegTask(M3U8Seg seg) {
+        LogUtils.i(TAG, "startDownloadSegTask index=" + seg.getSegIndex() +", duration="+ seg.getDuration() + ", url=" + seg.getUrl());
+        int result = 0;
         if (seg.hasInitSegment()) {
             String initSegmentName = seg.getInitSegmentName();
             File initSegmentFile = new File(mSaveDir, initSegmentName);
             if (!initSegmentFile.exists()) {
-                downloadSegFile(seg, initSegmentFile, seg.getInitSegmentUri());
+                int ret = mFileDownloadManager.addTsVideoTask(initSegmentFile, seg.getInitSegmentUri(), mCallback);
+                if (ret != -1) {
+                    mDownLoadIdMap.put(seg.getSegIndex() > 0 ? -seg.getSegIndex() : Integer.MIN_VALUE, ret); //用Integer.MIN_VALUE标识-0
+                    result++;
+                }
             }
         }
         String segName = seg.getSegName();
         File segFile = new File(mSaveDir, segName);
         if (!segFile.exists()) {
             // ts is network resource, download ts file then rename it to local file.
-            downloadSegFile(seg, segFile, seg.getUrl());
-        }
-
-        //确保当前文件下载完整
-        if (segFile.exists() && segFile.length() == seg.getContentLength()) {
-            //只有这样的情况下才能保证当前的ts文件真正被下载下来了
-            mSegLengthMap.put(seg.getSegIndex(), segFile.length());
-            seg.setName(segName);
-            seg.setFileSize(segFile.length());
-            //更新进度
-            notifyCacheProgress();
-        }
-    }
-
-    private void downloadSegFile(M3U8Seg seg, File segFile, String downloadUrl) throws Exception {
-        HttpURLConnection connection = null;
-        InputStream inputStream = null;
-        try {
-            connection = HttpUtils.getConnection(downloadUrl, mHeaders);
-            int responseCode = connection.getResponseCode();
-            if (responseCode == HttpUtils.RESPONSE_200 || responseCode == HttpUtils.RESPONSE_206) {
-                seg.setRetryCount(0);
-                //no effect
-                if (mContinuousSuccessSegCount > CONTINUOUS_SUCCESS_TS_THRESHOLD && mM3U8DownloadPoolCount < THREAD_POOL_COUNT) {
-                    mM3U8DownloadPoolCount += 1;
-                    mContinuousSuccessSegCount -= 1;
-                    setThreadPoolArgument(mM3U8DownloadPoolCount, mM3U8DownloadPoolCount);
-                }
-                inputStream = connection.getInputStream();
-                long contentLength = connection.getContentLength();
-                saveSegFile(inputStream, segFile, contentLength, seg, downloadUrl);
-            } else {
-                mContinuousSuccessSegCount = 0;
-                if (responseCode == HttpUtils.RESPONSE_503) {
-                    //no effect
-                    if (mM3U8DownloadPoolCount > 1) {
-                        mM3U8DownloadPoolCount -= 1;
-                        setThreadPoolArgument(mM3U8DownloadPoolCount, mM3U8DownloadPoolCount);
-                        downloadSegFile(seg, segFile, downloadUrl);
-                    } else {
-                        seg.setRetryCount(seg.getRetryCount() + 1);
-                        if (seg.getRetryCount() < HttpUtils.MAX_RETRY_COUNT) {
-                            downloadSegFile(seg, segFile, downloadUrl);
-                        } else {
-                            throw new VideoCacheException("retry download exceed the limit times, threadPool overload.");
-                        }
-                    }
-                } else {
-                    throw new VideoCacheException("download failed, responseCode=" + responseCode);
-                }
+            //downloadSegFile(seg, segFile, seg.getUrl());
+            int ret = mFileDownloadManager.addTsVideoTask(segFile, seg.getUrl(), mCallback);
+            if (ret != -1) {
+                mDownLoadIdMap.put(seg.getSegIndex(), ret);
+                result++;
             }
-        } catch (Exception e) {
-            LogUtils.w(TAG, "downloadFile failed, exception=" + e.getMessage());
-            throw e;
-        } finally {
-            HttpUtils.closeConnection(connection);
-            ProxyCacheUtils.close(inputStream);
         }
-    }
-
-    private void saveSegFile(InputStream inputStream, File file, long contentLength, M3U8Seg seg, String downloadUrl) throws Exception {
-        FileOutputStream fos = null;
-        long totalLength = 0;
-        File tmpFile = new File(file.getParentFile(), file.getName() + TEMP_POSTFIX);
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
-        try {
-            fos = new FileOutputStream(tmpFile);
-            int len;
-            byte[] buf = new byte[StorageUtils.DEFAULT_BUFFER_SIZE];
-            while ((len = inputStream.read(buf)) != -1) {
-                totalLength += len;
-                fos.write(buf, 0, len);
-            }
-            if (contentLength > 0 && contentLength == totalLength) {
-                seg.setContentLength(contentLength);
-            } else {
-                seg.setContentLength(totalLength);
-            }
-            tmpFile.renameTo(file);
-        } catch (IOException e) {
-            if (tmpFile.exists() && ((contentLength > 0 && contentLength == tmpFile.length()) || (contentLength == -1 && totalLength == tmpFile.length()))) {
-                //这时候说明file已经下载完成了
-                tmpFile.renameTo(file);
-            } else {
-                if ((e instanceof ProtocolException &&
-                        !TextUtils.isEmpty(e.getMessage()) &&
-                        e.getMessage().contains("unexpected end of stream")) &&
-                        (contentLength > totalLength && totalLength == tmpFile.length())) {
-                    if (tmpFile.length() == 0) {
-                        seg.setRetryCount(seg.getRetryCount() + 1);
-                        if (seg.getRetryCount() < HttpUtils.MAX_RETRY_COUNT) {
-                            downloadSegFile(seg, file, downloadUrl);
-                        } else {
-                            LogUtils.w(TAG, tmpFile.getAbsolutePath() + ", length=" + tmpFile.length() + ", saveFile failed, exception=" + e);
-                            if (tmpFile.exists()) {
-                                tmpFile.delete();
-                            }
-                            throw e;
-                        }
-                    } else {
-                        seg.setContentLength(totalLength);
-                        tmpFile.renameTo(file);
-                    }
-                } else {
-                    LogUtils.w(TAG, tmpFile.getAbsolutePath() + " saveFile failed, exception=" + e);
-                    if (tmpFile.exists()) {
-                        tmpFile.delete();
-                    }
-                    throw e;
-                }
-            }
-
-        } finally {
-            ProxyCacheUtils.close(inputStream);
-            ProxyCacheUtils.close(fos);
-        }
+        return result;
     }
 
     private void notifyCacheProgress() {
-        updateM3U8TsInfo();
+        long nowTime = SystemClock.uptimeMillis();
+        //1s更新一次
+        if (nowTime - mLastInvokeTime <= 1000 && !mSegIndexUncachedList.isEmpty()) {
+            return;
+        }
         if (mCachedSegCount > mTotalSegCount) {
             mCachedSegCount = mTotalSegCount;
         }
         mCacheInfo.setCachedTs(mCachedSegCount);
-        mCacheInfo.setTsLengthMap(mSegLengthMap);
         mCacheInfo.setCachedSize(mCachedSize);
         float percent = mCachedSegCount * 1.0f * 100 / mTotalSegCount;
 
         if (!ProxyCacheUtils.isFloatEqual(percent, mPercent)) {
-            long nowTime = System.currentTimeMillis();
-            if (mCachedSize > mLastCachedSize && nowTime > mLastInvokeTime) {
+            if (mCachedSize > mLastCachedSize) {
                 mSpeed = (mCachedSize - mLastCachedSize) * 1000 * 1.0f / (nowTime - mLastInvokeTime);
             }
-            mListener.onM3U8TaskProgress(percent, mCachedSize, mSpeed, mSegLengthMap);
+            mListener.onM3U8TaskProgress(percent, mCachedSize, mSpeed);
             mPercent = percent;
             mCacheInfo.setPercent(percent);
             mCacheInfo.setSpeed(mSpeed);
-            mLastInvokeTime = nowTime;
             mLastCachedSize = mCachedSize;
-            saveVideoInfo();
         }
-
-        boolean isCompleted = true;
-        for (M3U8Seg ts : mSegList) {
-            File tsFile = new File(mSaveDir, ts.getSegName());
-            if (!tsFile.exists()) {
-                isCompleted = false;
-                break;
-            }
-        }
-        mCacheInfo.setIsCompleted(isCompleted);
+        mLastInvokeTime = nowTime;
+        boolean isCompleted = mSegIndexUncachedList.isEmpty();
         if (isCompleted) {
+            mCacheInfo.setIsCompleted(true);
             mCacheInfo.setTotalSize(mCachedSize);
             mTotalSize = mCachedSize;
             notifyOnTaskCompleted();
-            saveVideoInfo();
         }
-    }
-
-    private void updateM3U8TsInfo() {
-        long tempCachedSize = 0;
-        int tempCachedTs = 0;
-        for (int index = 0; index < mSegList.size(); index++) {
-            M3U8Seg ts = mSegList.get(index);
-            File tempTsFile = new File(mSaveDir, ts.getSegName());
-            if (tempTsFile.exists() && tempTsFile.length() > 0) {
-                ts.setFileSize(tempTsFile.length());
-                mSegLengthMap.put(index, tempTsFile.length());
-                tempCachedSize += tempTsFile.length();
-                tempCachedTs++;
-            }
-        }
-        mCachedSegCount = tempCachedTs;
-        mCachedSize = tempCachedSize;
+        LogUtils.d(TAG, "notifyCacheProgress cost:"  + (SystemClock.uptimeMillis() - nowTime));
     }
 }

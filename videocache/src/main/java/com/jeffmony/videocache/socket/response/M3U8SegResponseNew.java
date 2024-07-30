@@ -1,5 +1,6 @@
 package com.jeffmony.videocache.socket.response;
 
+import com.jeffmony.videocache.VideoLockManager;
 import com.jeffmony.videocache.VideoProxyCacheManager;
 import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.socket.request.HttpRequest;
@@ -27,7 +28,7 @@ import java.util.Map;
  */
 public class M3U8SegResponseNew extends BaseResponse {
 
-    private static final String TAG = "M3U8SegResponse";
+    private static final String TAG = "M3U8SegResponseNew";
 
     private static final String TEMP_POSTFIX = ".downloading";
 
@@ -43,7 +44,7 @@ public class M3U8SegResponseNew extends BaseResponse {
         super(request, videoUrl, headers, time);
         mParentUrl = parentUrl;
         mSegUrl = videoUrl;
-        mSegFile = new File(mCachePath, fileName);
+        mSegFile = new File(mCachePath, fileName);//fileName:/d6035ce66faad6d47b1ec371ba2d7672/1.ts
         LogUtils.i(TAG, "SegFilePath="+mSegFile.getAbsolutePath());
         mFileName = mSegFile.getName();
         mM3U8Md5 = getM3U8Md5(fileName);
@@ -54,7 +55,7 @@ public class M3U8SegResponseNew extends BaseResponse {
         mSegIndex = getSegIndex(fileName);
         mResponseState = ResponseState.OK;
         LogUtils.i(TAG, "start M3U8SegResponse: index=" + mSegIndex +", parentUrl=" + mParentUrl + "\n, segUrl=" + mSegUrl);
-        VideoProxyCacheManager.getInstance().seekToCacheTaskFromServer(mParentUrl, mSegIndex);
+        VideoProxyCacheManager.getInstance().notifyCurSegIndex(mParentUrl, mSegIndex, time);
     }
 
     private String getM3U8Md5(String str) throws VideoCacheException {
@@ -67,16 +68,16 @@ public class M3U8SegResponseNew extends BaseResponse {
     }
 
     private int getSegIndex(String str) throws VideoCacheException {
-        int idotIndex = str.lastIndexOf(".");
-        if (idotIndex == -1) {
+        int dotIndex = str.lastIndexOf(".");
+        if (dotIndex == -1) {
             throw new VideoCacheException("Error index during getTcd sIndex");
         }
-        str = str.substring(0, idotIndex);
-        int seperatorIndex = str.lastIndexOf("/");
-        if (seperatorIndex == -1) {
+        str = str.substring(0, dotIndex);
+        int separatorIndex = str.lastIndexOf("/");
+        if (separatorIndex == -1) {
             throw new VideoCacheException("Error index during getTsIndex");
         }
-        str = str.substring(seperatorIndex + 1);
+        str = str.substring(separatorIndex + 1);
         if (str.startsWith(ProxyCacheUtils.INIT_SEGMENT_PREFIX)) {
             str = str.substring(ProxyCacheUtils.INIT_SEGMENT_PREFIX.length());
             LogUtils.i(TAG, "str = " + str);
@@ -86,32 +87,13 @@ public class M3U8SegResponseNew extends BaseResponse {
 
     @Override
     public void sendBody(Socket socket, OutputStream outputStream, long pending) throws Exception {
-        //因为下载过程的文件名称和已经完成的不一样，可以简化判断条件
+        Object lock = VideoLockManager.getInstance().getLock(mM3U8Md5);
         while(!mSegFile.exists()) {
-            downloadSegFile(mSegUrl, mSegFile);
-            if ((mSegLength > 0 && mSegLength == mSegFile.length()) || (mSegLength == -1 && mSegFile.length() > 0)) {
-                break;
+            synchronized (lock) {
+                lock.wait(WAIT_TIME);
             }
-            LogUtils.d(TAG,  "FileLength=" + mSegFile.length() + ", segLength=" + mSegLength + ", FilePath=" + mSegFile.getAbsolutePath());
+            LogUtils.d(TAG,  "wait " + mSegFile.getName() + " available");
         }
-//        if (mFileName.startsWith(ProxyCacheUtils.INIT_SEGMENT_PREFIX)) {
-//            while(!mSegFile.exists()) {
-//                downloadSegFile(mSegUrl, mSegFile);
-//                if ((mSegLength > 0 && mSegLength == mSegFile.length()) || (mSegLength == -1 && mSegFile.length() > 0)) {
-//                    break;
-//                }
-//            }
-//        } else {
-//            boolean isM3U8SegCompleted = VideoProxyCacheManager.getInstance().isM3U8SegCompleted(mM3U8Md5, mSegIndex, mSegFile.getAbsolutePath());
-//            while (!isM3U8SegCompleted) {
-//                downloadSegFile(mSegUrl, mSegFile);
-//                isM3U8SegCompleted = VideoProxyCacheManager.getInstance().isM3U8SegCompleted(mM3U8Md5, mSegIndex, mSegFile.getAbsolutePath());
-//                if ((mSegLength > 0 && mSegLength == mSegFile.length()) || (mSegLength == -1 && mSegFile.length() > 0)) {
-//                    break;
-//                }
-//            }
-//            LogUtils.d(TAG,  "FileLength=" + mSegFile.length() + ", segLength=" + mSegLength + ", FilePath=" + mSegFile.getAbsolutePath());
-//        }
         RandomAccessFile randomAccessFile = null;
 
         try {
