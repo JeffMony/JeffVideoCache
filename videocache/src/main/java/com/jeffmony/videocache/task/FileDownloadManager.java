@@ -23,6 +23,8 @@ public class FileDownloadManager {
     }
     private final DownloadManager mDownloader;
 
+    private final int MAX_DOWNLOAD_TASK = 3; //Runtime.getRuntime().availableProcessors() * 2 + 1; //同时下载最大任务数
+
     public static FileDownloadManager getInstance() {
         return InstanceHolder.sInstance;
     }
@@ -37,7 +39,7 @@ public class FileDownloadManager {
         mDownloader = new DownloadManager.Builder().
                 context(ProxyCacheUtils.getConfig().getContext()).
                 downloader(downloader).
-                threadPoolSize(Runtime.getRuntime().availableProcessors() * 2 + 1). //io密集型
+                threadPoolSize(MAX_DOWNLOAD_TASK). //io密集型
                 logger(message -> LogUtils.i(TAG, message)).
                 build();
     }

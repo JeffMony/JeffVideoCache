@@ -30,10 +30,10 @@ public class M3U8CacheTaskNew extends VideoCacheTask {
     private final Map<Integer, Integer> mDownLoadIdMap = new HashMap<>();
     private final List<Integer> mSegIndexUncachedList = new ArrayList<>(); //存放还没有缓存的ts编号
     private int mRightCachingPos = 0; //mSeekIndex右边的任务，优先下载，指向mSegIndexUncachedList
-    private int mLeftCachingPos = 0; //mSeekIndex左边的任务，指向mSegIndexUncachedList
     private final Handler mHandler;
     private int mCachedSegCount;
     private volatile int mSeekIndex = 0; //当前正在请求的ts索引
+    private int downloadTask = M3U8_CACHE_STEP; //同时下载任务数
     private float maxSpeed = 0;
     private float minSpeed = 0;
     private int expectedSeekIndex = 0;
@@ -184,8 +184,13 @@ public class M3U8CacheTaskNew extends VideoCacheTask {
                 if (index != null && index >= 0) {
                     mCachedSegCount++;
                     mCachedSize += totalBytes;
+                    //动态调整，适应网络情况
+                    if (mDownLoadIdMap.isEmpty()) {
+                        maxSpeed = 0;
+                        minSpeed = 0;
+                    }
                     maxSpeed = Math.max(speed, maxSpeed);
-                    minSpeed = Math.min(speed, minSpeed);
+                    minSpeed = Math.min(speed, minSpeed == 0 ? speed : minSpeed);
                 }
                 int tsIndex = -1;
                 if (index != null) {
@@ -195,33 +200,29 @@ public class M3U8CacheTaskNew extends VideoCacheTask {
                         mSegIndexUncachedList.remove(Integer.valueOf(tsIndex));
                     }
                 }
-                //todo 还应该可以缩减任务？
-                //根据大小做调整？获取第一个视频长度
-                //优先保障第一个视频
-                //cdn一般会比较慢，多个文件同时下载可能会限制，如何动态调整
-                //分片大小不一致
+                //cdn一般会比较慢，多个文件同时下载可能会限制，需要动态调整
                 if (tsIndex >= 0) {
                     M3U8Seg seg = mSegList.get(tsIndex);
+                    float midPoint = (maxSpeed + minSpeed) / 2;
                     LogUtils.d(TAG, "onSuccess: speed:"+ speed + "KB/S,maxSpeed:" + maxSpeed + "KB/S" + ",minSpeed:" + minSpeed + "KB/S"
+                            + "\n,(maxSpeed + minSpeed)/2:" + midPoint + "KB/s" + ",downloadTask:" + downloadTask
                             + "\n,filePath:" + filePath
                             + "\n,seg duration:" + seg.getDuration()
                             + "\n,total Size:" + totalBytes / 1024f + "KB,time:" + time/1000f + "S,mDownLoadIdList size:" + mDownLoadIdMap.size());
                     //如果下载速度满足播放器消费情况，则串行下载
                     if ((float) time / 1000 <= seg.getDuration()) {
-                        scheduleCacheTask(1);
-                    } else {
-                        if (mDownLoadIdMap.isEmpty()) {
-                            scheduleCacheTask(3);
-                        } else if (mDownLoadIdMap.size() == 1) {
-                            scheduleCacheTask(2);
-                        } else if (mDownLoadIdMap.size() == 2) {
-                            scheduleCacheTask(1);
-                        }
+                        //do nothing
+                    } else if (speed < midPoint && ((midPoint - speed) / midPoint) < 0.4) {
+                        //do noting
+                    } else if (speed >= midPoint) {
+                        //同时允许最大任务数为3个，太多可能拖慢播放器正在请求的ts
+                        downloadTask = downloadTask < 3 ? downloadTask + 1 : downloadTask;
+                    } else if (speed < midPoint) {
+                        downloadTask = downloadTask > 1 ? downloadTask - 1 : downloadTask;
                     }
-                } else {
-                    //理论上不应该发生
-                    LogUtils.e(TAG, "tsIndex illegal");
-                    scheduleCacheTask(1);
+                }
+                if (mDownLoadIdMap.size() < downloadTask) {
+                    scheduleCacheTask(downloadTask - mDownLoadIdMap.size());
                 }
                 LogUtils.d(TAG, "onSuccess scheduleCacheTask, mDownLoadIdList size:" + mDownLoadIdMap.size() + ",cost:" + (SystemClock.uptimeMillis() - start));
                 notifyCacheProgress();
@@ -272,7 +273,6 @@ public class M3U8CacheTaskNew extends VideoCacheTask {
         cancelAllTask();
         mDownLoadIdMap.clear();
         mRightCachingPos = 0;
-        mLeftCachingPos = 0;
         mLastInvokeTime = 0;
     }
 
@@ -288,13 +288,15 @@ public class M3U8CacheTaskNew extends VideoCacheTask {
             return;
         }
         int success = 0;
-        //首先从mSeekIndex开始下载
+        //mSegIndexUncachedList会动态变化，但0到mRightCachingPos这部分元素下标是稳定的
         for (int i = mRightCachingPos; i < mSegIndexUncachedList.size(); i++) {
             int sgeIndex = mSegIndexUncachedList.get(i);
+            LogUtils.d(TAG, "scheduleCacheTask sgeIndex:" + sgeIndex + ",mSeekIndex:" + mSeekIndex + ",mRightCachingPos:" + mRightCachingPos);
             if (sgeIndex < mSeekIndex) {
+                LogUtils.i(TAG, "scheduleCacheTask ignore:" + sgeIndex + ", mSeekIndex=" + mSeekIndex);
+                mRightCachingPos = i;
                 continue;
             }
-            mRightCachingPos = i;
             final M3U8Seg seg = mSegList.get(sgeIndex);
             success += startDownloadSegTask(seg);
             if (success >= m3u8CacheStep) {
@@ -302,12 +304,11 @@ public class M3U8CacheTaskNew extends VideoCacheTask {
             }
         }
         //如果mSeekIndex之后都是已经缓存的，则缓存之前的任务
-        for (int i = mLeftCachingPos; i < mSegIndexUncachedList.size(); i++) {
+        for (int i = 0; i < mSegIndexUncachedList.size(); i++) {
             int sgeIndex = mSegIndexUncachedList.get(i);
             if (sgeIndex >= mSeekIndex) {
                 return;
             }
-            mLeftCachingPos = i;
             final M3U8Seg seg = mSegList.get(sgeIndex);
             success += startDownloadSegTask(seg);
             if (success >= m3u8CacheStep) {
