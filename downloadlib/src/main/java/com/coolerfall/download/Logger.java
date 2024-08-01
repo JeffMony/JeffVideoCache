@@ -9,6 +9,11 @@ public interface Logger {
   Logger EMPTY = new Logger() {
     @Override public void log(String message) {
     }
+
+    @Override
+    public void log(String message, Throwable tr) {
+
+    }
   };
 
   /**
@@ -17,4 +22,6 @@ public interface Logger {
    * @param message message
    */
   void log(String message);
+
+  void log(String message, Throwable tr);
 }

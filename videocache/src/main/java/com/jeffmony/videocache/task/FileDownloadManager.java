@@ -5,6 +5,7 @@ import com.coolerfall.download.DownloadCallback;
 import com.coolerfall.download.DownloadManager;
 import com.coolerfall.download.DownloadRequest;
 import com.coolerfall.download.Downloader;
+import com.coolerfall.download.Logger;
 import com.coolerfall.download.OkHttpDownloader;
 import com.coolerfall.download.URLDownloader;
 import com.jeffmony.videocache.utils.LogUtils;
@@ -40,7 +41,17 @@ public class FileDownloadManager {
                 context(ProxyCacheUtils.getConfig().getContext()).
                 downloader(downloader).
                 threadPoolSize(MAX_DOWNLOAD_TASK). //io密集型
-                logger(message -> LogUtils.i(TAG, message)).
+                logger(new Logger() {
+                    @Override
+                    public void log(String message) {
+                        LogUtils.i(TAG, message);
+                    }
+
+                    @Override
+                    public void log(String message, Throwable tr) {
+                        LogUtils.e(TAG, message, tr);
+                    }
+                }).
                 build();
     }
 
@@ -64,7 +75,7 @@ public class FileDownloadManager {
                 .destinationFilePath(file.getAbsolutePath())
                 .downloadCallback(downloadCallback)
                 //.downloadId(tsIndex) //确保唯一性；如果不设置，sdk的downloadId是自增的;不设置，防止冲突
-                .retryTime(2)
+                .retryTime(3)
                 //.allowedNetworkTypes(DownloadRequest.NETWORK_WIFI | DownloadRequest.NETWORK_MOBILE)
                 .progressInterval(1000, TimeUnit.MILLISECONDS)
                 .url(url) // fixme header inject

@@ -229,7 +229,7 @@ final class DownloadDispatcher extends Thread {
         } else {
           boolean ret = file.delete();
           raf = new RandomAccessFile(file, "rw");
-          logger.log("file exist, but server don't support breakpoint downloading, delete file:" + ret);
+          logger.log("file:" + file.getName() + " exists, but server don't support breakpoint downloading, delete file:" + ret);
         }
       } else {
         raf = new RandomAccessFile(file, "rw");
@@ -288,12 +288,17 @@ final class DownloadDispatcher extends Thread {
         throw new DownloadException(statusCode, "input stream error");
       }
     } catch (IOException e) {
-      logger.log("Caught new exception: " + e.getMessage());
+      logger.log("Caught new exception: name:" + request.destinationFilePath(), e);
 
       if (e instanceof DownloadException) {
         DownloadException exception = (DownloadException) e;
         updateFailure(request, exception.getCode(), exception.getMessage());
       } else {
+        //如果range超出范围，会报java.io.FileNotFoundException，比如tmp文件来不及改成原名字时
+        File file = new File(request.tempFilePath());
+        if (file.exists()) {
+          file.delete();
+        }
         updateFailure(request, 0, e.getMessage());
       }
     } finally {
