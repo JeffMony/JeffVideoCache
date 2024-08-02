@@ -64,6 +64,7 @@ public class M3U8Utils {
             String initSegmentUri = null;
             String segmentByteRange = null;
             float segDuration = 0;
+            float m3u8Duration = 0;
             int segIndex = 0;
             String line;
             while ((line = bufferedReader.readLine()) != null) {
@@ -158,6 +159,7 @@ public class M3U8Utils {
                     seg.setInitSegmentInfo(initSegmentUri, segmentByteRange);
                 }
                 m3u8.addSeg(seg);
+                m3u8Duration += segDuration;
                 segIndex++;
                 segDuration = 0;
                 hasDiscontinuity = false;
@@ -169,7 +171,7 @@ public class M3U8Utils {
                 initSegmentUri = null;
                 segmentByteRange = null;
             }
-
+            m3u8.setDuration(m3u8Duration);
             m3u8.setTargetDuration(targetDuration);
             m3u8.setVersion(version);
             m3u8.setSequence(sequence);
@@ -206,6 +208,7 @@ public class M3U8Utils {
             String initSegmentUri = null;
             String segmentByteRange = null;
             float segDuration = 0;
+            float m3u8Duration = 0;
             int segIndex = 0;
 
             String line;
@@ -291,6 +294,7 @@ public class M3U8Utils {
                     seg.setInitSegmentInfo(initSegmentUri, segmentByteRange);
                 }
                 m3u8.addSeg(seg);
+                m3u8Duration += segDuration;
                 segIndex++;
                 segDuration = 0;
                 hasDiscontinuity = false;
@@ -302,7 +306,7 @@ public class M3U8Utils {
                 initSegmentUri = null;
                 segmentByteRange = null;
             }
-
+            m3u8.setDuration(m3u8Duration);
             m3u8.setTargetDuration(targetDuration);
             m3u8.setVersion(version);
             m3u8.setSequence(sequence);

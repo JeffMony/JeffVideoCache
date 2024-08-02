@@ -1,9 +1,11 @@
 package com.jeffmony.videocache.task;
 
 import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 
 import com.coolerfall.download.DownloadCallback;
+import com.jeffmony.videocache.common.VideoCacheException;
 import com.jeffmony.videocache.m3u8.M3U8;
 import com.jeffmony.videocache.m3u8.M3U8Seg;
 import com.jeffmony.videocache.model.VideoCacheInfo;
@@ -40,11 +42,14 @@ public class M3U8CacheTaskNew extends VideoCacheTask {
 
     private volatile boolean initFlag = false;
 
+    private final M3U8 mM3u8;
+
 
     public M3U8CacheTaskNew(VideoCacheInfo cacheInfo, M3U8 m3u8, final Handler handler) {
         super(cacheInfo, null);
 //        HandlerThread handlerThread = new HandlerThread("M3U8CacheTask");
 //        handlerThread.start();
+        mM3u8 = m3u8;
         mHandler = new Handler(handler.getLooper());
         mFileDownloadManager = FileDownloadManager.getInstance();
         mSegList = m3u8.getSegList();
@@ -63,7 +68,10 @@ public class M3U8CacheTaskNew extends VideoCacheTask {
         //避免下载成功回调过快导致scheduleCacheTask和addCacheTask线程不安全
         mHandler.post(() -> {
             //第一个任务必须是能下载的，后续任务都靠onSuccess驱动
-            init();
+            if(!init()) {
+                LogUtils.e(TAG, "startCacheTask false");
+                return;
+            }
             scheduleCacheTask(M3U8_CACHE_STEP);
             notifyOnTaskStart();
         });
@@ -73,6 +81,10 @@ public class M3U8CacheTaskNew extends VideoCacheTask {
     public void pauseCacheTask() {
         LogUtils.i(TAG, "pauseCacheTask");
         isStart = false;
+        if (Looper.myLooper() == mHandler.getLooper()) {
+            cancelAllTask();
+            return;
+        }
         mHandler.post(this::cancelAllTask);
     }
 
@@ -89,13 +101,12 @@ public class M3U8CacheTaskNew extends VideoCacheTask {
 
     @Override
     public void resumeCacheTask() {
-        //mPlayer.start();
         LogUtils.i(TAG, "resumeCacheTask");
         if (isStart) {
             return;
         }
         isStart = true;
-        mHandler.post(() -> {
+        Runnable runnable = () -> {
             int success = 0;
             if (!mDownLoadIdMap.isEmpty()) {
                 //to avoid java.util.ConcurrentModificationException
@@ -109,7 +120,12 @@ public class M3U8CacheTaskNew extends VideoCacheTask {
             if (success == 0 && !mSegIndexUncachedList.isEmpty()) {
                 scheduleCacheTask(M3U8_CACHE_STEP);
             }
-        });
+        };
+        if (Looper.myLooper() == mHandler.getLooper()) {
+            runnable.run();
+            return;
+        }
+        mHandler.post(runnable);
     }
 
     @Override
@@ -134,6 +150,7 @@ public class M3U8CacheTaskNew extends VideoCacheTask {
             }
             mSeekIndex = segIndex;
             LogUtils.i(TAG, "seekToCacheTaskFromServer segIndex=" + mSeekIndex + " expectedSeekIndex:" + expectedSeekIndex);
+            //必须保证当前请求可以下载
             //可能会有重复请求
             if (mSeekIndex == expectedSeekIndex || mSeekIndex == expectedSeekIndex - 1) {
                 expectedSeekIndex = mSeekIndex + 1;
@@ -232,11 +249,12 @@ public class M3U8CacheTaskNew extends VideoCacheTask {
 
         @Override
         public void onFailure(int downloadId, int statusCode, String errMsg) {
-            notifyOnTaskFailed(new Exception("downloadId:" + downloadId + "statusCode:" + statusCode + errMsg));
+            LogUtils.e(TAG, "onFailure: downloadId:" + downloadId + ",statusCode:" + statusCode + ",errMsg:" + errMsg);
+            notifyOnTaskFailed(new Exception("downloadId:" + downloadId + ",statusCode:" + statusCode + ",errMsg:" + errMsg));
         }
     };
 
-    private void init() {
+    private boolean init() {
         //如果ts过多，遍历会耗时
         int tempCachedTs = 0;
         long tempCachedSize = 0;
@@ -267,6 +285,16 @@ public class M3U8CacheTaskNew extends VideoCacheTask {
         mCachedSize = tempCachedSize;
         mTotalSize = mCachedSize;
         mCacheInfo.setIsCompleted(mSegIndexUncachedList.isEmpty());
+        if (!mCacheInfo.isCompleted() && mCachedSize > 0) {
+            long availableSpace = StorageUtils.getAllocatableBytes(mSaveDir);
+            long needSize = mM3u8.getEstimateSize() - mCachedSize;
+            LogUtils.i(TAG, "init task:needSize:"+ needSize / 1024 / 1024 + "MB,availableSpace:" + availableSpace / 1024 / 1024);
+            if (needSize >= availableSpace) {
+                notifyOnTaskFailed(new VideoCacheException("insufficient space:NeedLeastSize:" + needSize + ",availableSpace:" + availableSpace));
+                return false;
+            }
+        }
+        return true;
     }
 
     private void resetCacheTask() {

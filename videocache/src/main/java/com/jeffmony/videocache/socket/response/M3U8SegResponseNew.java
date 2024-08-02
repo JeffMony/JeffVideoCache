@@ -45,8 +45,8 @@ public class M3U8SegResponseNew extends BaseResponse {
         mParentUrl = parentUrl;
         mSegUrl = videoUrl;
         mSegFile = new File(mCachePath, fileName);//fileName:/d6035ce66faad6d47b1ec371ba2d7672/1.ts
-        LogUtils.i(TAG, "SegFilePath="+mSegFile.getAbsolutePath());
         mFileName = mSegFile.getName();
+        LogUtils.i(TAG, "SegFilePath="+mSegFile.getAbsolutePath());
         mM3U8Md5 = getM3U8Md5(fileName);
         if (mHeaders == null) {
             mHeaders = new HashMap<>();
@@ -88,11 +88,21 @@ public class M3U8SegResponseNew extends BaseResponse {
     @Override
     public void sendBody(Socket socket, OutputStream outputStream, long pending) throws Exception {
         Object lock = VideoLockManager.getInstance().getLock(mM3U8Md5);
-        while(!mSegFile.exists()) {
+        long wait = 0;
+        //todo 如何感知播放器已经断开，避免占用线程池
+        while(!mSegFile.exists() && wait < TIME_OUT) {
             synchronized (lock) {
                 lock.wait(WAIT_TIME);
             }
-            LogUtils.d(TAG,  "wait " + mSegFile.getName() + " available");
+            if (wait == 0) {
+                LogUtils.d(TAG,  "wait " + mSegFile.getName() + " available");
+            }
+            wait += WAIT_TIME;
+        }
+        //播放器可能超时
+        if (!mSegFile.exists()) {
+            LogUtils.e(TAG, "wait " + mSegFile.getName() + " timeout" + " socket.isClosed:" + socket.isClosed() + ",socket.isOutputShutdown:" + socket.isOutputShutdown());
+            return;
         }
         RandomAccessFile randomAccessFile = null;
 

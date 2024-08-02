@@ -9,6 +9,7 @@ import com.jeffmony.videocache.common.VideoRequest;
 import com.jeffmony.videocache.common.VideoType;
 import com.jeffmony.videocache.common.VideoParams;
 import com.jeffmony.videocache.m3u8.M3U8;
+import com.jeffmony.videocache.m3u8.M3U8Seg;
 import com.jeffmony.videocache.m3u8.M3U8Utils;
 import com.jeffmony.videocache.model.VideoCacheInfo;
 import com.jeffmony.videocache.okhttp.OkHttpManager;
@@ -156,6 +157,18 @@ public class VideoInfoParseManager {
             try {
                 M3U8 m3u8 = M3U8Utils.parseLocalM3U8Info(localM3U8File, cacheInfo.getVideoUrl());
                 cacheInfo.setTotalTs(m3u8.getSegCount());
+                //todo:可以像芒果tv那样自定义字段记录信息，不用再网络请求
+                //这里先不抛出空间不足提示，因为还要计算已经下载大小,推迟到task抛出
+                M3U8Seg seg = m3u8.getSegList().get(m3u8.getSegCount() / 2); //随机抽取
+                HttpURLConnection connection = HttpUtils.getHeadConnection(seg.getUrl(), null);
+                long segSize = connection.getContentLength();
+                if (segSize != -1) {
+                    m3u8.setEstimateSize((long) (segSize / seg.getDuration() * m3u8.getDuration()));
+                    m3u8.setNeedLeastSize(seg.getDuration() < 5 ? segSize * 20 : segSize * 10);
+                } else {
+                    m3u8.setNeedLeastSize(100 * 1024 * 1024); //100MB
+                    m3u8.setEstimateSize(1024 * 1024 * 1024); //1GB
+                }
                 videoRequest.getVideoInfoParsedListener().onM3U8ParsedFinished(videoRequest, m3u8, cacheInfo);
             } catch (Exception e) {
                 LogUtils.e(TAG, "parseProxyM3U8Info error.", e);
@@ -182,6 +195,23 @@ public class VideoInfoParseManager {
             } else {
                 cacheInfo.setVideoType(VideoType.M3U8_TYPE);
                 cacheInfo.setTotalTs(m3u8.getSegCount());
+                M3U8Seg seg = m3u8.getSegList().get(m3u8.getSegCount() / 2); //随机抽取
+                HttpURLConnection connection = HttpUtils.getHeadConnection(seg.getUrl(), null);
+                long segSize = connection.getContentLength();
+                if (segSize != -1) {
+                    m3u8.setEstimateSize((long) (segSize / seg.getDuration() * m3u8.getDuration()));
+                    m3u8.setNeedLeastSize(seg.getDuration() < 5 ? segSize * 10 : segSize * 5);
+                } else {
+                    m3u8.setNeedLeastSize(100 * 1024 * 1024); //100MB
+                    m3u8.setEstimateSize(1024 * 1024 * 1024); //1GB
+                }
+                long availableSpace = StorageUtils.getAllocatableBytes(new File(cacheInfo.getSavePath()));
+                LogUtils.i(TAG, "parseNetworkM3U8Info:EstimateSize:"+ m3u8.getEstimateSize() / 1024 / 1024 + "MB,NeedLeastSize:" + m3u8.getNeedLeastSize() / 1024 / 1024 + "MB,availableSpace:" + availableSpace / 1024 / 1024);
+                //有需求可以自己实现在空间不足情况下实现部分缓存，目前要求是必须能全部缓存
+                if (m3u8.getEstimateSize() >= availableSpace) {
+                    videoRequest.getVideoInfoParsedListener().onM3U8ParsedFailed(new VideoCacheException("insufficient space:Need:" + m3u8.getEstimateSize() + ",availableSpace:" + availableSpace), cacheInfo);
+                    return;
+                }
                 // 1.将M3U8结构保存到本地
                 File localM3U8File = new File(cacheInfo.getSavePath(), cacheInfo.getMd5() + StorageUtils.LOCAL_M3U8_SUFFIX);
                 M3U8Utils.createLocalM3U8File(localM3U8File, m3u8);

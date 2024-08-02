@@ -36,6 +36,8 @@ public abstract class BaseResponse {
     protected static final int WAIT_TIME = 50;
     protected static final int MAX_WAIT_TIME = 2 * 1000;
 
+    protected static final int TIME_OUT = 60 * 1000; //60s
+
     protected final HttpRequest mRequest;
     protected final String mCachePath;
     protected final String mVideoUrl;

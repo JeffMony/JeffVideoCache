@@ -32,16 +32,34 @@ public class HttpUtils {
     public static final int RESPONSE_206 = 206;
     public static final int RESPONSE_503 = 503;
 
+    /**
+     * get请求
+     * @param videoUrl
+     * @param headers
+     * @return
+     * @throws IOException
+     */
     public static HttpURLConnection getConnection(String videoUrl, Map<String, String> headers) throws IOException {
-        return getConnection(videoUrl, headers, false);
+        return getConnection("GET", videoUrl, headers, false);
     }
 
-    private static HttpURLConnection getConnection(String videoUrl, Map<String, String> headers, boolean shouldIgnoreCertErrors) throws IOException {
+    /**
+     * head请求
+     * @param videoUrl
+     * @param headers
+     * @return
+     * @throws IOException
+     */
+    public static HttpURLConnection getHeadConnection(String videoUrl, Map<String, String> headers) throws IOException {
+        return getConnection("HEAD", videoUrl, headers, false);
+    }
+
+    private static HttpURLConnection getConnection(String method, String videoUrl, Map<String, String> headers, boolean shouldIgnoreCertErrors) throws IOException {
         URL url = new URL(videoUrl);
         int redirectCount = 0;
         while (redirectCount < MAX_REDIRECT) {
             try {
-                HttpURLConnection connection = makeConnection(url, headers, shouldIgnoreCertErrors);
+                HttpURLConnection connection = makeConnection(method, url, headers, shouldIgnoreCertErrors);
                 int responseCode = connection.getResponseCode();
                 if (responseCode == HttpURLConnection.HTTP_MULT_CHOICE ||
                         responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
@@ -57,7 +75,7 @@ public class HttpUtils {
             } catch (IOException e) {
                 if ((e instanceof SSLHandshakeException || e instanceof SSLPeerUnverifiedException) && !shouldIgnoreCertErrors) {
                     //这种情况下需要信任证书重试
-                    return getConnection(videoUrl, headers, true);
+                    return getConnection(method, videoUrl, headers, true);
                 } else {
                     throw e;
                 }
@@ -79,11 +97,12 @@ public class HttpUtils {
         return url;
     }
 
-    private static HttpURLConnection makeConnection(URL url, Map<String, String> headers, boolean shouldIgnoreCertErrors) throws IOException {
+    private static HttpURLConnection makeConnection(String method, URL url, Map<String, String> headers, boolean shouldIgnoreCertErrors) throws IOException {
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         if (shouldIgnoreCertErrors && connection instanceof HttpsURLConnection) {
             trustAllCert((HttpsURLConnection) connection);
         }
+        connection.setRequestMethod(method);
         connection.setInstanceFollowRedirects(false);   //因为我们内部已经做了重定向的功能,不需要在connection内部再做了.
         connection.setConnectTimeout(ProxyCacheUtils.getConfig().getConnTimeOut());
         connection.setReadTimeout(ProxyCacheUtils.getConfig().getReadTimeOut());

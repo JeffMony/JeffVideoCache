@@ -30,6 +30,8 @@ public abstract class VideoCacheTask {
 
     protected volatile boolean isStart = false;
 
+    protected boolean hasFinish = false;
+
     public VideoCacheTask(VideoCacheInfo cacheInfo, Map<String, String> headers) {
         mCacheInfo = cacheInfo;
         mHeaders = headers;
@@ -79,6 +81,10 @@ public abstract class VideoCacheTask {
     }
 
     protected void notifyOnTaskCompleted() {
+        if (hasFinish) {
+            return;
+        }
+        hasFinish = true;
         StorageManager.getInstance().checkCache(mSaveDir.getAbsolutePath());
         mListener.onTaskCompleted(mTotalSize);
     }
