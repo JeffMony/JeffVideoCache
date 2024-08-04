@@ -8,7 +8,7 @@ public interface IVideoCacheListener {
 
     void onCacheProgress(VideoCacheInfo cacheInfo);
 
-    void onCacheError(VideoCacheInfo cacheInfo, int errorCode);
+    void onCacheError(VideoCacheInfo cacheInfo, String msg, int errorCode);
 
     void onCacheForbidden(VideoCacheInfo cacheInfo);
 

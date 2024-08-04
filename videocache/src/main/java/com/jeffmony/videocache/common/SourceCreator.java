@@ -1,13 +1,15 @@
 package com.jeffmony.videocache.common;
 
+import android.os.Handler;
+
 import com.jeffmony.videocache.m3u8.M3U8;
 import com.jeffmony.videocache.model.VideoCacheInfo;
 import com.jeffmony.videocache.socket.request.HttpRequest;
 import com.jeffmony.videocache.socket.response.BaseResponse;
 import com.jeffmony.videocache.socket.response.M3U8Response;
-import com.jeffmony.videocache.socket.response.M3U8SegResponse;
+import com.jeffmony.videocache.socket.response.M3U8SegResponseNew;
 import com.jeffmony.videocache.socket.response.Mp4Response;
-import com.jeffmony.videocache.task.M3U8CacheTask;
+import com.jeffmony.videocache.task.M3U8CacheTaskNew;
 import com.jeffmony.videocache.task.Mp4CacheTask;
 import com.jeffmony.videocache.task.VideoCacheTask;
 
@@ -26,11 +28,11 @@ public class SourceCreator {
     }
 
     public BaseResponse createM3U8SegResponse(HttpRequest request, String parentUrl, String videoUrl, Map<String, String> headers, long time, String fileName) throws Exception {
-        return new M3U8SegResponse(request, parentUrl, videoUrl, headers, time, fileName);
+        return new M3U8SegResponseNew(request, parentUrl, videoUrl, headers, time, fileName);
     }
 
-    public VideoCacheTask createM3U8CacheTask(VideoCacheInfo cacheInfo, Map<String, String> headers, M3U8 m3u8) {
-        return new M3U8CacheTask(cacheInfo, headers, m3u8);
+    public VideoCacheTask createM3U8CacheTask(VideoCacheInfo cacheInfo, Map<String, String> headers, M3U8 m3u8, Handler handler) {
+        return new M3U8CacheTaskNew(cacheInfo, m3u8, handler);
     }
 
     public VideoCacheTask createMp4CacheTask(VideoCacheInfo cacheInfo, Map<String, String> headers) {
