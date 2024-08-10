@@ -64,8 +64,8 @@ public class M3U8Utils {
             String initSegmentUri = null;
             String segmentByteRange = null;
             float segDuration = 0;
+            float m3u8Duration = 0;
             int segIndex = 0;
-
             String line;
             while ((line = bufferedReader.readLine()) != null) {
                 line = line.trim();
@@ -159,6 +159,7 @@ public class M3U8Utils {
                     seg.setInitSegmentInfo(initSegmentUri, segmentByteRange);
                 }
                 m3u8.addSeg(seg);
+                m3u8Duration += segDuration;
                 segIndex++;
                 segDuration = 0;
                 hasDiscontinuity = false;
@@ -170,7 +171,7 @@ public class M3U8Utils {
                 initSegmentUri = null;
                 segmentByteRange = null;
             }
-
+            m3u8.setDuration(m3u8Duration);
             m3u8.setTargetDuration(targetDuration);
             m3u8.setVersion(version);
             m3u8.setSequence(sequence);
@@ -207,6 +208,7 @@ public class M3U8Utils {
             String initSegmentUri = null;
             String segmentByteRange = null;
             float segDuration = 0;
+            float m3u8Duration = 0;
             int segIndex = 0;
 
             String line;
@@ -292,6 +294,7 @@ public class M3U8Utils {
                     seg.setInitSegmentInfo(initSegmentUri, segmentByteRange);
                 }
                 m3u8.addSeg(seg);
+                m3u8Duration += segDuration;
                 segIndex++;
                 segDuration = 0;
                 hasDiscontinuity = false;
@@ -303,7 +306,7 @@ public class M3U8Utils {
                 initSegmentUri = null;
                 segmentByteRange = null;
             }
-
+            m3u8.setDuration(m3u8Duration);
             m3u8.setTargetDuration(targetDuration);
             m3u8.setVersion(version);
             m3u8.setSequence(sequence);
@@ -381,8 +384,8 @@ public class M3U8Utils {
             }
             bfw.write(Constants.TAG_ENDLIST);
             bfw.flush();
-        } catch (Exception e){
-            LogUtils.w(TAG, "createLocalM3U8File failed exception = " + e.getMessage());
+        } catch (Exception e) {
+            LogUtils.e(TAG, "createLocalM3U8File failed exception = ", e);
             if (m3u8File.exists()) {
                 m3u8File.delete();
             }
@@ -401,6 +404,9 @@ public class M3U8Utils {
      * @throws Exception
      */
     public static void createProxyM3U8File(File m3u8File, M3U8 m3u8, String md5, Map<String, String> headers) throws Exception {
+        if (m3u8File.exists()) {
+            return;
+        }
         BufferedWriter bfw = new BufferedWriter(new FileWriter(m3u8File, false));
         bfw.write(Constants.PLAYLIST_HEADER + "\n");
         bfw.write(Constants.TAG_VERSION + ":" + m3u8.getVersion() + "\n");
@@ -443,6 +449,7 @@ public class M3U8Utils {
      * @return
      */
     public static boolean updateM3U8TsPortInfo(File proxyM3U8File, int proxyPort) {
+        //todo bug:没有更新EXT-X-MAP:URI的端口
         File tempM3U8File = null;
         if (proxyM3U8File.exists()) {
             File parentFile = proxyM3U8File.getParentFile();

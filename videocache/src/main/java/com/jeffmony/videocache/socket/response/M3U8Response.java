@@ -45,18 +45,24 @@ public class M3U8Response extends BaseResponse {
         }
         Object lock = VideoLockManager.getInstance().getLock(mMd5);
         int waitTime = WAIT_TIME;
+        long wait = 0;
 
         /**
          * 1.如果文件不存在或者proxy M3U8文件没有生成
          * 2.当前M3U8不能是直播
          */
-        while(!mFile.exists() || !VideoProxyCacheManager.getInstance().isM3U8LocalProxyReady(mMd5)) {
+        while((!mFile.exists() || !VideoProxyCacheManager.getInstance().isM3U8LocalProxyReady(mMd5)) && wait < TIME_OUT) {
             if (VideoProxyCacheManager.getInstance().isM3U8LiveType(mMd5)) {
                 throw new VideoCacheException("M3U8 is live type");
             }
             synchronized (lock) {
                 lock.wait(waitTime);
             }
+            wait += WAIT_TIME;
+        }
+        if (!mFile.exists() || !VideoProxyCacheManager.getInstance().isM3U8LocalProxyReady(mMd5)) {
+            LogUtils.e(TAG, "timeout");
+            return;
         }
         RandomAccessFile randomAccessFile = null;
 

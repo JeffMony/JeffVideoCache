@@ -7,7 +7,7 @@ public interface IVideoCacheTaskListener {
 
     void onTaskProgress(float percent, long cachedSize, float speed);
 
-    void onM3U8TaskProgress(float percent, long cachedSize, float speed, Map<Integer, Long> tsLengthMap);
+    void onM3U8TaskProgress(float percent, long cachedSize, float speed);
 
     void onTaskFailed(Exception e);
 

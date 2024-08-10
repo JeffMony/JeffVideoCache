@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -11,10 +12,16 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Toast;
 
+import com.jeffmony.videocache.utils.ProxyCacheUtils;
+
+import java.io.File;
+import java.io.IOException;
+
 public class MainActivity extends Activity {
 
     private EditText mVideoUrlEditText;
     private Button mVideoPlayBtn;
+    private Button mVideoDeleteBtn;
     private CheckBox mLocalProxyBox;
     private CheckBox mUseOkHttpBox;
 
@@ -31,7 +38,9 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
 
         mVideoUrlEditText = findViewById(R.id.video_url_edit_text);
+        //mVideoUrlEditText.setText(slow_url);
         mVideoPlayBtn = findViewById(R.id.video_play_btn);
+        mVideoDeleteBtn = findViewById(R.id.video_delete_btn);
         mLocalProxyBox = findViewById(R.id.local_proxy_box);
         mUseOkHttpBox = findViewById(R.id.okhttp_box);
         mRadioGroup = findViewById(R.id.player_group);
@@ -68,5 +77,48 @@ public class MainActivity extends Activity {
                 startActivity(intent);
             }
         });
+
+        mVideoDeleteBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    cleanDirectory(new File(ProxyCacheUtils.getConfig().getFilePath()));
+                } catch (IOException e) {
+                    //throw new RuntimeException(e);
+                }
+            }
+        });
     }
+
+
+    private static void cleanDirectory(File file) throws IOException {
+        if (!file.exists()) {
+            return;
+        }
+        File[] contentFiles = file.listFiles();
+        if (contentFiles != null) {
+            for (File contentFile : contentFiles) {
+                delete(contentFile);
+            }
+        }
+    }
+
+    private static void delete(File file) throws IOException {
+        if (file.isFile() && file.exists()) {
+            deleteOrThrow(file);
+        } else {
+            cleanDirectory(file);
+            deleteOrThrow(file);
+        }
+    }
+
+    private static void deleteOrThrow(File file) throws IOException {
+        if (file.exists()) {
+            boolean isDeleted = file.delete();
+            if (!isDeleted) {
+                throw new IOException(String.format("File %s can't be deleted", file.getAbsolutePath()));
+            }
+        }
+    }
+
 }

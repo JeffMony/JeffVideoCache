@@ -13,14 +13,43 @@ import java.util.List;
 public class M3U8 {
     private final String mUrl;                 //M3U8的url
     private float mTargetDuration;       //指定的duration
+    private float mTotalDuration; //总时长
     private int mSequence = 0;           //序列起始值
     private int mVersion = 3;            //版本号
     private boolean mIsLive;             //是否是直播
     private final List<M3U8Seg> mSegList;      //分片seg 列表
 
+    private long estimateSize = 0; //预估总大小
+
+    private long needLeastSize = 0; //要求设备留出最低的可用空间
+
     public M3U8(String url) {
         mUrl = url;
         mSegList = new ArrayList<>();
+    }
+
+    public float getDuration() {
+        return mTotalDuration;
+    }
+
+    public void setDuration(float mTotalDuration) {
+        this.mTotalDuration = mTotalDuration;
+    }
+
+    public long getEstimateSize() {
+        return estimateSize;
+    }
+
+    public void setEstimateSize(long estimateSize) {
+        this.estimateSize = estimateSize;
+    }
+
+    public long getNeedLeastSize() {
+        return needLeastSize;
+    }
+
+    public void setNeedLeastSize(long needLeastSize) {
+        this.needLeastSize = needLeastSize;
     }
 
     public String getUrl() {
@@ -65,14 +94,6 @@ public class M3U8 {
 
     public List<M3U8Seg> getSegList() {
         return mSegList;
-    }
-
-    public float getDuration() {
-        float duration = 0L;
-        for (M3U8Seg ts : mSegList) {
-            duration += ts.getDuration();
-        }
-        return duration;
     }
 
     public int getSegCount() {

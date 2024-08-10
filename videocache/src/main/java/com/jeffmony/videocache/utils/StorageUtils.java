@@ -1,6 +1,9 @@
 package com.jeffmony.videocache.utils;
 
 import android.content.Context;
+import android.os.Build;
+import android.os.Environment;
+import android.os.storage.StorageManager;
 
 import com.jeffmony.videocache.model.VideoCacheInfo;
 
@@ -28,6 +31,24 @@ public class StorageUtils {
     public static final String NON_M3U8_SUFFIX = ".video";
 
     private static final Object sInfoFileLock = new Object();
+
+    /**
+     * 获取目标存储的可用空间(去掉预留空间后)
+     * @param storagePath 目标路径，一般是{@link Environment#getDataDirectory()}
+     * @return 0或者正值
+     */
+    public static long getAllocatableBytes(File storagePath) {
+        StorageManager storageManager = (StorageManager) ProxyCacheUtils.getConfig().getContext().getSystemService(Context.STORAGE_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                return storageManager.getAllocatableBytes(storageManager.getUuidForPath(storagePath));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        long temp = storagePath.getUsableSpace(); // - mStorageManager.getStorageLowBytes(storagePath);
+        return temp >= 0 ? temp : 0;
+    }
 
     public static File getVideoFileDir(Context context) {
         return new File(context.getExternalFilesDir("Video"), "jeffmony");
@@ -109,10 +130,8 @@ public class StorageUtils {
             for (File f : files) {
                 if (!f.delete()) return false;
             }
-            return file.delete();
-        } else {
-            return file.delete();
         }
+        return file.delete();
     }
 
     /**

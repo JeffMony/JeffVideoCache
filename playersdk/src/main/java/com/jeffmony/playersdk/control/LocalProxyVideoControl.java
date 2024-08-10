@@ -1,5 +1,7 @@
 package com.jeffmony.playersdk.control;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import com.jeffmony.playersdk.impl.BasePlayerImpl;
@@ -34,10 +36,14 @@ public class LocalProxyVideoControl {
         }
 
         @Override
-        public void onCacheError(VideoCacheInfo cacheInfo, int errorCode) { }
+        public void onCacheError(VideoCacheInfo cacheInfo, String msg, int errorCode) {
+            Log.e(TAG, "onCacheError: " + msg);
+        }
 
         @Override
-        public void onCacheForbidden(VideoCacheInfo cacheInfo) { }
+        public void onCacheForbidden(VideoCacheInfo cacheInfo) {
+            Log.e(TAG, "onCacheForbidden: " + cacheInfo);
+        }
 
         @Override
         public void onCacheFinished(VideoCacheInfo cacheInfo) {

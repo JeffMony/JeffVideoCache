@@ -28,6 +28,10 @@ public abstract class VideoCacheTask {
     protected float mSpeed = 0.0f;
     protected File mSaveDir;
 
+    protected volatile boolean isStart = false;
+
+    protected boolean hasFinish = false;
+
     public VideoCacheTask(VideoCacheInfo cacheInfo, Map<String, String> headers) {
         mCacheInfo = cacheInfo;
         mHeaders = headers;
@@ -40,6 +44,10 @@ public abstract class VideoCacheTask {
         if (!mSaveDir.exists()) {
             mSaveDir.mkdir();
         }
+    }
+
+    public boolean isStart() {
+        return isStart;
     }
 
     public void setTaskListener(@NonNull IVideoCacheTaskListener listener) {
@@ -56,7 +64,10 @@ public abstract class VideoCacheTask {
 
     public abstract void seekToCacheTaskFromServer(long startPosition);   //来自服务端的seek操作,针对非M3U8视频
 
+    @Deprecated
     public abstract void seekToCacheTaskFromServer(int segIndex);         //来自服务端的seek操作,针对M3U8视频
+
+    public abstract void seekToCacheTaskFromServer(int segIndex, long time);  //来自服务端的seek操作,针对M3U8视频
 
     public abstract void resumeCacheTask();
 
@@ -70,6 +81,10 @@ public abstract class VideoCacheTask {
     }
 
     protected void notifyOnTaskCompleted() {
+        if (hasFinish) {
+            return;
+        }
+        hasFinish = true;
         StorageManager.getInstance().checkCache(mSaveDir.getAbsolutePath());
         mListener.onTaskCompleted(mTotalSize);
     }

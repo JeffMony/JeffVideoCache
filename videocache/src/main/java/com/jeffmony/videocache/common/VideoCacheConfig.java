@@ -1,5 +1,7 @@
 package com.jeffmony.videocache.common;
 
+import android.content.Context;
+
 public class VideoCacheConfig {
 
     private final long mExpireTime;      //video cache中的过期时间，超过过期时间采用LRU清理规则清理video cache数据
@@ -13,9 +15,12 @@ public class VideoCacheConfig {
 
     private final SourceCreator mSourceCreator; //可以自定义响应、下载逻辑
 
-    public VideoCacheConfig(long expireTime, long maxCacheSize, String filePath,
+    private final Context mContext;
+
+    public VideoCacheConfig(Context context, long expireTime, long maxCacheSize, String filePath,
                             int readTimeOut, int connTimeOut, boolean ignoreCert,
                             int port, boolean useOkHttp, SourceCreator sourceCreator) {
+        mContext = context;
         mExpireTime = expireTime;
         mMaxCacheSize = maxCacheSize;
         mFilePath = filePath;
@@ -65,5 +70,9 @@ public class VideoCacheConfig {
 
     public SourceCreator getSourceCreator() {
         return mSourceCreator;
+    }
+
+    public Context getContext() {
+        return mContext;
     }
 }
